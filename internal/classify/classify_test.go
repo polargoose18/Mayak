@@ -249,6 +249,12 @@ func TestClassify(t *testing.T) {
 		{"tcp not run", func(o *Observation) { o.TCP = "" }, report.VerdictInconclusive},
 		{"unknown tcp value", func(o *Observation) { o.TCP = "weird" }, report.VerdictInconclusive},
 		{"tls not run", func(o *Observation) { o.TLS = TLS{} }, report.VerdictInconclusive},
+		{"target handshake fails for another reason", func(o *Observation) {
+			o.TLS.TargetSNI = HandshakeOther
+		}, report.VerdictInconclusive},
+		{"other on the neutral and control handshakes proves nothing", func(o *Observation) {
+			o.TLS = TLS{TargetSNI: HandshakeResetAfterHello, NeutralSNI: HandshakeOther, TargetSNIViaControl: HandshakeOther}
+		}, report.VerdictInconclusive},
 		{"unknown handshake value", func(o *Observation) { o.TLS.TargetSNI = "weird" }, report.VerdictInconclusive},
 		{"http not run", func(o *Observation) { o.HTTP = HTTP{} }, report.VerdictInconclusive},
 		{"unknown http value", func(o *Observation) { o.HTTP.Result = "weird" }, report.VerdictInconclusive},

@@ -79,6 +79,11 @@ const (
 	HandshakeResetAfterHello Handshake = "reset_after_hello"
 	HandshakeTimeout         Handshake = "timeout"
 	HandshakeCertInvalid     Handshake = "cert_invalid"
+
+	// HandshakeOther is any other failure (TLS alert, not a TLS server,
+	// connection refused). It is neither a clear block nor a completed
+	// handshake, so no rule is based on it.
+	HandshakeOther Handshake = "other"
 )
 
 // TLS holds the handshakes of the tls_sni test.

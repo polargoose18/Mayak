@@ -3,6 +3,8 @@ package mockdpi
 import (
 	"crypto/tls"
 	"encoding/json"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,9 +36,18 @@ func stubHandler(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("<html><body><h1>" + StubBody + "</h1></body></html>"))
 }
 
+// newServer returns an unstarted test server whose error log is silenced:
+// net/http would otherwise print the client's address into it.
+func newServer(h http.HandlerFunc) *httptest.Server {
+	srv := httptest.NewUnstartedServer(h)
+	srv.Config.ErrorLog = log.New(io.Discard, "", 0)
+	return srv
+}
+
 func startStubPage(t testing.TB) string {
 	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(stubHandler))
+	srv := newServer(stubHandler)
+	srv.Start()
 	t.Cleanup(srv.Close)
 	return listenAddr(srv.Listener)
 }
@@ -45,10 +56,11 @@ func startStubPage(t testing.TB) string {
 // server has a single certificate, so it is served for any SNI.
 func startControlHTTP(t testing.TB, cert tls.Certificate) (tlsAddr, httpAddr string) {
 	t.Helper()
-	plain := httptest.NewServer(http.HandlerFunc(echoHandler))
+	plain := newServer(echoHandler)
+	plain.Start()
 	t.Cleanup(plain.Close)
 
-	secure := httptest.NewUnstartedServer(http.HandlerFunc(echoHandler))
+	secure := newServer(echoHandler)
 	secure.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
 	secure.StartTLS()
 	t.Cleanup(secure.Close)

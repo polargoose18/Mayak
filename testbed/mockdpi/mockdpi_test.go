@@ -1,13 +1,16 @@
 package mockdpi
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/netip"
+	"os"
 	"runtime"
 	"strings"
 	"syscall"
@@ -408,5 +411,42 @@ func TestStartRejectsBadIPs(t *testing.T) {
 				t.Error("Start did not fail")
 			}
 		})
+	}
+}
+
+// net/http logs "TLS handshake error from <client addr>" unless its ErrorLog
+// is silenced. Client addresses must not reach any log (AGENTS.md).
+func TestServersDoNotLogClientAddresses(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	env := Start(t, Config{Control: true, StubPage: true})
+
+	// A handshake the server rejects: the client does not trust the certificate.
+	raw, err := net.DialTimeout("tcp", env.ControlTLS, ioTimeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = raw.SetDeadline(time.Now().Add(ioTimeout))
+	if err := tls.Client(raw, &tls.Config{ServerName: "localhost"}).Handshake(); err == nil {
+		t.Fatal("handshake must fail without the CertPool")
+	}
+	_ = raw.Close()
+
+	// Plain HTTP spoken to the TLS port, and TLS spoken to the plain port.
+	for _, addr := range []string{env.ControlTLS, env.StubPage} {
+		c, err := net.DialTimeout("tcp", addr, ioTimeout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = c.Write([]byte("GET / HTTP/1.1\r\nHost: x\r\n\r\n\x00\x01garbage\r\n\r\n"))
+		_ = c.SetReadDeadline(time.Now().Add(ioTimeout))
+		_, _ = io.Copy(io.Discard, c)
+		_ = c.Close()
+	}
+
+	if strings.Contains(buf.String(), "127.0.0.1") {
+		t.Errorf("server log contains a client address: %q", buf.String())
 	}
 }

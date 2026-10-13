@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mayak.report/1",
+  "description": "Network reachability report. Fields outside this schema are dropped by the validator, not rejected. Limits not expressible here: total size <= 65536 bytes; ts is rounded down to 5 minutes; evidence nesting <= 2 levels (the evidence object is level 1).",
+  "type": "object",
+  "required": ["schema", "report_id", "ts", "agent", "net", "targets_rev", "results"],
+  "properties": {
+    "schema": {"const": "mayak.report/1"},
+    "report_id": {"type": "string", "pattern": "^[0-9a-f]{10}$"},
+    "ts": {"type": "string", "format": "date-time"},
+    "agent": {
+      "type": "object",
+      "required": ["ver", "os", "source"],
+      "properties": {
+        "ver": {"type": "string"},
+        "os": {"type": "string"},
+        "source": {"enum": ["cli", "web"]}
+      }
+    },
+    "net": {
+      "type": "object",
+      "required": ["ip_ver", "resolver", "country"],
+      "properties": {
+        "ip_ver": {"type": "integer"},
+        "resolver": {"type": "string"},
+        "country": {"type": "string", "pattern": "^([A-Z]{2})?$"},
+        "region": {"type": ["string", "null"]}
+      }
+    },
+    "targets_rev": {"type": "string"},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "test", "verdict"],
+        "properties": {
+          "target": {"type": "string"},
+          "test": {"enum": ["dns", "tcp", "tls_sni", "http", "quic", "tcp_freeze", "throughput", "ctrl"]},
+          "verdict": {"enum": ["ok", "dns_tamper", "ip_block", "sni_block", "tls_intercept", "http_stub", "quic_block", "vendor_geoblock", "timeout_unknown", "inconclusive", "vendor_down", "allowlist_mode", "freeze_after_n", "throttled"]},
+          "evidence": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {"type": ["string", "number", "boolean", "null"], "maxLength": 200},
+                {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "null"], "maxLength": 200}},
+                {"type": "array", "items": {"type": ["string", "number", "boolean", "null"], "maxLength": 200}}
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

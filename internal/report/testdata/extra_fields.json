@@ -1,0 +1,13 @@
+{
+  "schema": "mayak.report/1",
+  "client_ip": "203.0.113.7",
+  "report_id": "b7c1e0a4f2",
+  "ts": "2026-10-13T12:30:00Z",
+  "agent": {"ver": "0.3.1", "os": "linux/arm64", "source": "cli", "extra": 1},
+  "net": {"ip_ver": 4, "resolver": "isp", "country": "RU", "region": null},
+  "targets_rev": "2026-10-12.1",
+  "results": [
+    {"target": "example-ai-api", "test": "tls_sni", "verdict": "sni_block",
+     "evidence": {"ctrl_sni_ok": true, "target_sni_err": "reset_after_hello", "ms": 212}}
+  ]
+}

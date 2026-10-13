@@ -127,3 +127,30 @@ func Verify(pub ed25519.PublicKey, data []byte) (*Targets, error) {
 	}
 	return t, nil
 }
+
+// VerifyAny is like Verify, but accepts a signature by any of the keys.
+func VerifyAny(pubs []ed25519.PublicKey, data []byte) (*Targets, error) {
+	if len(pubs) == 0 {
+		return nil, errors.New("verify targets: no public keys")
+	}
+	for _, pub := range pubs {
+		t, err := Verify(pub, data)
+		if !errors.Is(err, ErrBadSignature) {
+			return t, err // success, or an error that another key will not fix
+		}
+	}
+	return nil, fmt.Errorf("verify targets: %w", ErrBadSignature)
+}
+
+// ParseUnsigned reads a targets list without a signature (the bare Targets
+// JSON) and checks it against the same format rules as Verify.
+func ParseUnsigned(data []byte) (*Targets, error) {
+	var t Targets
+	if err := strictUnmarshal(data, &t); err != nil {
+		return nil, invalid("targets: %v", err)
+	}
+	if err := t.validate(); err != nil {
+		return nil, err
+	}
+	return &t, nil
+}

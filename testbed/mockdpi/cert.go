@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-// newCert creates a self-signed certificate for localhost and 127.0.0.1 and a
-// pool that trusts it.
-func newCert() (tls.Certificate, *x509.CertPool, error) {
+// newCert creates a self-signed certificate for localhost, 127.0.0.1 and the
+// extra names, and a pool that trusts it.
+func newCert(extraNames []string) (tls.Certificate, *x509.CertPool, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return tls.Certificate{}, nil, fmt.Errorf("generate key: %w", err)
@@ -32,7 +32,7 @@ func newCert() (tls.Certificate, *x509.CertPool, error) {
 		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		DNSNames:              []string{"localhost"},
+		DNSNames:              append([]string{"localhost"}, extraNames...),
 		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)

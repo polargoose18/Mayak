@@ -247,6 +247,8 @@ func TestClassify(t *testing.T) {
 		}, report.VerdictInconclusive},
 		{"DNS not run at all", func(o *Observation) { o.DNS = DNS{} }, report.VerdictInconclusive},
 		{"tcp not run", func(o *Observation) { o.TCP = "" }, report.VerdictInconclusive},
+		{"tcp fails for another reason", func(o *Observation) { tcpFails(o, TCPOther) }, report.VerdictInconclusive},
+		{"http fails for another reason", func(o *Observation) { o.HTTP = HTTP{Result: HTTPOther} }, report.VerdictInconclusive},
 		{"unknown tcp value", func(o *Observation) { o.TCP = "weird" }, report.VerdictInconclusive},
 		{"tls not run", func(o *Observation) { o.TLS = TLS{} }, report.VerdictInconclusive},
 		{"target handshake fails for another reason", func(o *Observation) {

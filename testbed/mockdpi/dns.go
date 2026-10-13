@@ -1,6 +1,8 @@
 package mockdpi
 
 import (
+	"crypto/tls"
+	"io"
 	"net"
 	"net/netip"
 	"testing"
@@ -60,18 +62,38 @@ func startDNS(t testing.TB, h dns.Handler) string {
 	if err != nil {
 		t.Fatalf("mockdpi: listen udp: %v", err)
 	}
+	runDNS(t, &dns.Server{PacketConn: pc, Handler: h}, pc)
+	return pc.LocalAddr().String()
+}
+
+// startDoT starts a DNS-over-TLS server (TCP, TLS 1.2+) on a random loopback
+// port and shuts it down in t.Cleanup.
+func startDoT(t testing.TB, h dns.Handler, cert tls.Certificate) string {
+	t.Helper()
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{cert}})
+	if err != nil {
+		t.Fatalf("mockdpi: listen dot: %v", err)
+	}
+	runDNS(t, &dns.Server{Listener: ln, Handler: h}, ln)
+	return ln.Addr().String()
+}
+
+// runDNS serves srv, waits until it is up and shuts it down in t.Cleanup.
+// listener is closed if the start fails.
+func runDNS(t testing.TB, srv *dns.Server, listener io.Closer) {
+	t.Helper()
 	started := make(chan struct{})
 	done := make(chan error, 1)
-	srv := &dns.Server{PacketConn: pc, Handler: h, NotifyStartedFunc: func() { close(started) }}
+	srv.NotifyStartedFunc = func() { close(started) }
 	go func() { done <- srv.ActivateAndServe() }()
 
 	select {
 	case <-started:
 	case err := <-done:
-		_ = pc.Close()
+		_ = listener.Close()
 		t.Fatalf("mockdpi: dns server failed to start: %v", err)
 	case <-time.After(5 * time.Second):
-		_ = pc.Close()
+		_ = listener.Close()
 		t.Fatalf("mockdpi: dns server did not start in time")
 	}
 	t.Cleanup(func() {
@@ -80,5 +102,4 @@ func startDNS(t testing.TB, h dns.Handler) string {
 		}
 		<-done
 	})
-	return pc.LocalAddr().String()
 }

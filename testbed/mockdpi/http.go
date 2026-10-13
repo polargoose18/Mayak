@@ -44,12 +44,20 @@ func newServer(h http.HandlerFunc) *httptest.Server {
 	return srv
 }
 
-func startStubPage(t testing.TB) string {
+// startStubPage starts the block page over plain HTTP and over TLS (single
+// certificate, so any SNI).
+func startStubPage(t testing.TB, cert tls.Certificate) (httpAddr, tlsAddr string) {
 	t.Helper()
-	srv := newServer(stubHandler)
-	srv.Start()
-	t.Cleanup(srv.Close)
-	return listenAddr(srv.Listener)
+	plain := newServer(stubHandler)
+	plain.Start()
+	t.Cleanup(plain.Close)
+
+	secure := newServer(stubHandler)
+	secure.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+	secure.StartTLS()
+	t.Cleanup(secure.Close)
+
+	return listenAddr(plain.Listener), listenAddr(secure.Listener)
 }
 
 // startControlHTTP starts the control HTTP echo, plain and over TLS. The TLS

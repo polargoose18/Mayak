@@ -11,7 +11,9 @@
 //     and a normal address for the rest.
 //   - blackhole: TCP server that accepts connections and never answers.
 //   - stub_page: HTTP server that answers every request with a block page.
-//   - control: a clean control node (TLS with any SNI, HTTP echo, DNS).
+//   - control: a clean control node (TLS with any SNI, HTTP echo, DNS over
+//     UDP and over TLS).
+//   - closed port: a port that refuses connections.
 //
 // Limitation: dropping a SYN (a connect that hangs without any answer from
 // the kernel) cannot be emulated without a firewall. The blackhole scenario
@@ -39,6 +41,14 @@ type Config struct {
 	StubPage        bool
 	Control         bool
 
+	// ClosedPort reserves a loopback TCP port with nothing listening on it:
+	// connecting gets an immediate RST, like a RST in answer to a SYN.
+	ClosedPort bool
+
+	// CertNames are extra DNS names for the self-signed certificate, so that
+	// tests can use a host name like "target.example".
+	CertNames []string
+
 	// NormalIP is the address returned by dns_spoof for names that are not
 	// spoofed and by the control DNS for every name. Default 127.0.0.1.
 	NormalIP netip.Addr
@@ -65,9 +75,12 @@ type Env struct {
 	DNSSpoof        string // UDP
 	Blackhole       string // TCP
 	StubPage        string // TCP, plain HTTP
+	StubPageTLS     string // TCP, HTTPS with the same block page, any SNI
 	ControlTLS      string // TCP, HTTPS echo, any SNI
 	ControlHTTP     string // TCP, plain HTTP echo
 	ControlDNS      string // UDP
+	ControlDoT      string // TCP, DNS over TLS, same answers as ControlDNS
+	ClosedPort      string // TCP, nothing listens
 
 	// CertPool trusts the self-signed certificate of the TLS scenarios. The
 	// certificate is valid for "localhost" and 127.0.0.1 only, so clients that
@@ -88,7 +101,7 @@ func Start(t testing.TB, cfg Config) *Env {
 		t.Fatalf("mockdpi: NormalIP %v is not an IPv4 address", normal)
 	}
 
-	cert, pool, err := newCert()
+	cert, pool, err := newCert(cfg.CertNames)
 	if err != nil {
 		t.Fatalf("mockdpi: create certificate: %v", err)
 	}
@@ -111,11 +124,15 @@ func Start(t testing.TB, cfg Config) *Env {
 		env.Blackhole = startBlackhole(t)
 	}
 	if cfg.StubPage {
-		env.StubPage = startStubPage(t)
+		env.StubPage, env.StubPageTLS = startStubPage(t, cert)
 	}
 	if cfg.Control {
 		env.ControlTLS, env.ControlHTTP = startControlHTTP(t, cert)
 		env.ControlDNS = startDNS(t, newDNSHandler(nil, netip.Addr{}, normal))
+		env.ControlDoT = startDoT(t, newDNSHandler(nil, netip.Addr{}, normal), cert)
+	}
+	if cfg.ClosedPort {
+		env.ClosedPort = reserveClosedPort(t)
 	}
 	return env
 }

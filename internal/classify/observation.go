@@ -66,7 +66,11 @@ type TCPResult string
 const (
 	TCPOK      TCPResult = "ok"
 	TCPTimeout TCPResult = "timeout"
-	TCPReset   TCPResult = "reset"
+	TCPReset   TCPResult = "reset" // RST in answer to the SYN (connection refused)
+
+	// TCPOther is any other failure (network unreachable, etc.). No rule is
+	// based on it.
+	TCPOther TCPResult = "other"
 )
 
 // Handshake is the outcome of one TLS handshake. The empty value means the
@@ -115,6 +119,10 @@ const (
 	HTTPResponded HTTPResult = "responded"
 	HTTPTimeout   HTTPResult = "timeout"
 	HTTPReset     HTTPResult = "reset"
+
+	// HTTPOther is any other failure (bad certificate, protocol error). No
+	// rule is based on it.
+	HTTPOther HTTPResult = "other"
 )
 
 // HTTPResponse describes a response by status, body size and body hash.

@@ -450,3 +450,53 @@ func TestServersDoNotLogClientAddresses(t *testing.T) {
 		t.Errorf("server log contains a client address: %q", buf.String())
 	}
 }
+
+func TestClosedPortRefusesConnections(t *testing.T) {
+	env := Start(t, Config{ClosedPort: true})
+	_, err := net.DialTimeout("tcp", env.ClosedPort, ioTimeout)
+	if !errors.Is(err, syscall.ECONNREFUSED) {
+		t.Errorf("err = %v, want ECONNREFUSED", err)
+	}
+}
+
+func TestStubPageOverTLS(t *testing.T) {
+	env := Start(t, Config{StubPage: true, CertNames: []string{"target.example"}})
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig:   &tls.Config{ServerName: "target.example", RootCAs: env.CertPool},
+		DisableKeepAlives: true,
+	}}
+	req, _ := http.NewRequest(http.MethodGet, "https://"+env.StubPageTLS+"/", nil)
+	body, status := do(t, client, req)
+	if status != http.StatusOK || !strings.Contains(body, StubBody) {
+		t.Errorf("status = %d, body = %q", status, body)
+	}
+}
+
+func TestControlDoT(t *testing.T) {
+	env := Start(t, Config{Control: true, NormalIP: netip.MustParseAddr("192.0.2.9")})
+	m := new(dns.Msg)
+	m.SetQuestion("anything.test.", dns.TypeA)
+	c := &dns.Client{Net: "tcp-tls", Timeout: ioTimeout, TLSConfig: &tls.Config{ServerName: "localhost", RootCAs: env.CertPool}}
+	r, _, err := c.Exchange(m, env.ControlDoT)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := answerIPs(t, r); len(got) != 1 || got[0] != "192.0.2.9" {
+		t.Errorf("answer = %v", got)
+	}
+}
+
+func TestCertNames(t *testing.T) {
+	env := Start(t, Config{Control: true, CertNames: []string{"target.example"}})
+	for _, name := range []string{"localhost", "target.example"} {
+		c, err := tlsHandshake(t, env.ControlTLS, &tls.Config{ServerName: name, RootCAs: env.CertPool})
+		if err != nil {
+			t.Errorf("%s: %v", name, err)
+			continue
+		}
+		_ = c.Close()
+	}
+	if _, err := tlsHandshake(t, env.ControlTLS, &tls.Config{ServerName: "other.example", RootCAs: env.CertPool}); err == nil {
+		t.Error("a name outside the certificate must not verify")
+	}
+}

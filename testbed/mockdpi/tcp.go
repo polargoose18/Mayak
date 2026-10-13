@@ -134,3 +134,19 @@ func startBlackhole(t testing.TB) string {
 func normalizeName(s string) string {
 	return strings.ToLower(strings.TrimSuffix(s, "."))
 }
+
+// reserveClosedPort returns a loopback address whose port had a listener a
+// moment ago and has none now, so connecting gets an immediate RST. The port
+// could in theory be taken by another process before the test connects.
+func reserveClosedPort(t testing.TB) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("mockdpi: listen: %v", err)
+	}
+	addr := listenAddr(ln)
+	if err := ln.Close(); err != nil {
+		t.Fatalf("mockdpi: close: %v", err)
+	}
+	return addr
+}

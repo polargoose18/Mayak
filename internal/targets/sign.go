@@ -44,7 +44,7 @@ func Sign(priv ed25519.PrivateKey, payload []byte, now time.Time) ([]byte, error
 	if t.V != CurrentVersion {
 		return nil, fmt.Errorf("sign targets: %w: v is %d, this tool signs v%d", ErrUnsupportedVersion, t.V, CurrentVersion)
 	}
-	if err := t.checkClock(now); err != nil {
+	if err := t.checkClock(now, 0); err != nil { // no allowance when signing
 		return nil, fmt.Errorf("sign targets: %w", err)
 	}
 	return signBytes(priv, payload)
@@ -83,14 +83,15 @@ func ParseUnsigned(data []byte) (*Targets, error) {
 
 // Verify checks that the file is signed by one of the keys, reads the list
 // and checks it: the format version, the content rules and the clock (not
-// expired, and expiring at most MaxLifetime from now). Any of the keys may
+// expired, and expiring at most MaxLifetime plus ClockSkew from now; an
+// expired list gets no allowance). Any of the keys may
 // have signed it, which is what makes key rotation possible (docs/KEYS.md).
 func Verify(pubs []ed25519.PublicKey, data []byte, now time.Time) (*Targets, error) {
 	t, err := Open(pubs, data)
 	if err != nil {
 		return nil, err
 	}
-	if err := t.checkClock(now); err != nil {
+	if err := t.checkClock(now, ClockSkew); err != nil {
 		return nil, fmt.Errorf("verify targets: %w", err)
 	}
 	return t, nil

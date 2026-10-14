@@ -43,6 +43,13 @@ const (
 
 	// MaxLifetime is how far ahead of the signing time a list may expire.
 	MaxLifetime = 30 * 24 * time.Hour
+
+	// ClockSkew is the allowance of Verify for a clock that runs behind the
+	// signer's: a list that expires up to this much beyond MaxLifetime from
+	// the agent's now is still accepted. It applies only to "expires is too
+	// far ahead". It does not apply to "expired" (an expired list is never
+	// accepted), nor to Sign (nothing beyond MaxLifetime is signed).
+	ClockSkew = 10 * time.Minute
 )
 
 var (
@@ -126,13 +133,13 @@ func (t Targets) validate() error {
 	return nil
 }
 
-// checkClock checks expires against now: it must be in the future and not
-// further than MaxLifetime ahead.
-func (t Targets) checkClock(now time.Time) error {
+// checkClock checks expires against now: it must be in the future, and not
+// further than MaxLifetime plus skew ahead. The expiry check has no allowance.
+func (t Targets) checkClock(now time.Time, skew time.Duration) error {
 	switch {
 	case !now.Before(t.Expires):
 		return ErrExpired
-	case t.Expires.After(now.Add(MaxLifetime)):
+	case t.Expires.After(now.Add(MaxLifetime + skew)):
 		return invalid("expires is more than %d days ahead", int(MaxLifetime/(24*time.Hour)))
 	}
 	return nil

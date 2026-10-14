@@ -211,7 +211,7 @@ func TestExpiry(t *testing.T) {
 		{"a day left", testNow.Add(24 * time.Hour), nil},
 		{"a second left", testNow.Add(time.Second), nil},
 		{"exactly 30 days", testNow.Add(MaxLifetime), nil},
-		{"31 days", testNow.Add(MaxLifetime + time.Second), ErrInvalid},
+		{"31 days", testNow.Add(MaxLifetime + 24*time.Hour), ErrInvalid},
 		{"expires now", testNow, ErrExpired},
 		{"expired a second ago", testNow.Add(-time.Second), ErrExpired},
 		{"long expired", testNow.Add(-90 * 24 * time.Hour), ErrExpired},
@@ -251,6 +251,121 @@ func TestExpiry(t *testing.T) {
 	noExp := `{"v":1,"rev":"2026-10-13.1","items":[{"id":"a","host":"example.org","category":"dev","rationale":"Fictional target number one.","rev":"2026-10-13.1"}]}`
 	if _, err := Sign(priv, []byte(noExp), testNow); !errors.Is(err, ErrInvalid) {
 		t.Errorf("no expires: err = %v, want ErrInvalid", err)
+	}
+}
+
+// ClockSkew applies only to "expires is too far ahead" and only in Verify.
+// "Expired" gets no allowance, and Sign gets none at all.
+func TestClockSkew(t *testing.T) {
+	pub, priv := newKey(t)
+	pubs := []ed25519.PublicKey{pub}
+	const min = time.Minute
+
+	if ClockSkew != 10*min {
+		t.Fatalf("ClockSkew = %v, want 10m", ClockSkew)
+	}
+
+	// The list was signed at testNow with expires = testNow + 30 days + extra
+	// (extra > 0 needs a signer whose clock is ahead). The agent's clock is
+	// testNow + offset. It is accepted when expires - agent now <= 30 days +
+	// 10 minutes, that is, extra - offset <= 10 minutes.
+	tests := []struct {
+		name   string
+		offset time.Duration // the agent's clock relative to the signer's
+		extra  time.Duration // expires beyond 30 days
+		ok     bool
+	}{
+		{"agent clock -9m, expires +30d", -9 * min, 0, true},
+		{"agent clock -9m, expires +30d+9m", -9 * min, 9 * min, false},
+		{"agent clock -9m, expires +30d+11m", -9 * min, 11 * min, false},
+		{"agent clock -11m, expires +30d", -11 * min, 0, false},
+		{"agent clock -11m, expires +30d+9m", -11 * min, 9 * min, false},
+		{"agent clock -11m, expires +30d+11m", -11 * min, 11 * min, false},
+		{"agent clock +0, expires +30d", 0, 0, true},
+		{"agent clock +0, expires +30d+9m", 0, 9 * min, true},
+		{"agent clock +0, expires +30d+11m", 0, 11 * min, false},
+		{"exactly at the allowance", 0, 10 * min, true},
+		{"a nanosecond over the allowance", 0, 10*min + time.Nanosecond, false},
+		{"agent clock ahead is never a problem here", 11 * min, 11 * min, true},
+		{"agent clock -10m, expires +30d", -10 * min, 0, true},
+		{"agent clock -10m, expires +30d+1ns", -10 * min, time.Nanosecond, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := sample()
+			tr.Expires = testNow.Add(MaxLifetime + tc.extra)
+			data, err := signBytes(priv, payloadOf(t, tr))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = Verify(pubs, data, testNow.Add(tc.offset))
+			if tc.ok && err != nil {
+				t.Errorf("want accepted, got %v", err)
+			}
+			if !tc.ok && !errors.Is(err, ErrInvalid) {
+				t.Errorf("want ErrInvalid (too far ahead), got %v", err)
+			}
+		})
+	}
+}
+
+func TestExpiredGetsNoAllowance(t *testing.T) {
+	pub, priv := newKey(t)
+	pubs := []ed25519.PublicKey{pub}
+	for _, tc := range []struct {
+		name    string
+		expires time.Duration // relative to the agent's now
+		ok      bool
+	}{
+		{"expires in a nanosecond", time.Nanosecond, true},
+		{"expires exactly now", 0, false},
+		{"expired a nanosecond ago", -time.Nanosecond, false},
+		{"expired within the skew", -9 * time.Minute, false},
+		{"expired at the skew", -ClockSkew, false},
+		{"expired long ago", -48 * time.Hour, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := sample()
+			tr.Expires = testNow.Add(tc.expires)
+			data, err := signBytes(priv, payloadOf(t, tr))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = Verify(pubs, data, testNow)
+			if tc.ok && err != nil {
+				t.Errorf("want accepted, got %v", err)
+			}
+			if !tc.ok && !errors.Is(err, ErrExpired) {
+				t.Errorf("want ErrExpired, got %v", err)
+			}
+		})
+	}
+}
+
+// Signing gets no allowance: nothing beyond 30 days is signed.
+func TestSignGetsNoAllowance(t *testing.T) {
+	_, priv := newKey(t)
+	for _, tc := range []struct {
+		name  string
+		extra time.Duration
+		ok    bool
+	}{
+		{"exactly 30 days", 0, true},
+		{"a nanosecond over", time.Nanosecond, false},
+		{"within the skew", 9 * time.Minute, false},
+		{"at the skew", ClockSkew, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := sample()
+			tr.Expires = testNow.Add(MaxLifetime + tc.extra)
+			_, err := Sign(priv, payloadOf(t, tr), testNow)
+			if tc.ok && err != nil {
+				t.Errorf("want signed, got %v", err)
+			}
+			if !tc.ok && !errors.Is(err, ErrInvalid) {
+				t.Errorf("want ErrInvalid, got %v", err)
+			}
+		})
 	}
 }
 

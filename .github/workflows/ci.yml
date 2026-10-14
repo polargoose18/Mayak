@@ -11,17 +11,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
       - run: make check
       - run: make sign-check
+      - run: go test -race ./...
+      # Run as a pinned version, not added to go.mod. Raise the version by hand.
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
 
   # Only on release tags: a release must not carry the test key.
   release-check:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       - run: make release-check

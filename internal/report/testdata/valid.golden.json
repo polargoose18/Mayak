@@ -3,8 +3,8 @@
   "report_id": "b7c1e0a4f2",
   "ts": "2026-10-13T12:30:00Z",
   "agent": {
-    "ver": "0.3.1",
-    "os": "linux/arm64",
+    "ver": "0.3",
+    "os": "linux",
     "source": "cli"
   },
   "net": {

@@ -2,11 +2,28 @@
   "schema": "mayak.report/1",
   "report_id": "b7c1e0a4f2",
   "ts": "2026-10-13T12:37:42+03:00",
-  "agent": {"ver": "0.3.1", "os": "linux/arm64", "source": "cli"},
-  "net": {"ip_ver": 4, "resolver": "isp", "country": "RU", "region": null},
+  "agent": {
+    "ver": "0.3",
+    "os": "linux",
+    "source": "cli"
+  },
+  "net": {
+    "ip_ver": 4,
+    "resolver": "isp",
+    "country": "RU",
+    "region": null
+  },
   "targets_rev": "2026-10-12.1",
   "results": [
-    {"target": "example-ai-api", "test": "tls_sni", "verdict": "sni_block",
-     "evidence": {"ctrl_sni_ok": true, "target_sni_err": "reset_after_hello", "ms": 212}}
+    {
+      "target": "example-ai-api",
+      "test": "tls_sni",
+      "verdict": "sni_block",
+      "evidence": {
+        "ctrl_sni_ok": true,
+        "target_sni_err": "reset_after_hello",
+        "ms": 212
+      }
+    }
   ]
 }

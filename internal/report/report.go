@@ -48,6 +48,37 @@ const (
 	SourceWeb = "web"
 )
 
+// Agent operating systems. Only the family is reported, never the version or
+// the architecture, so that the value does not fingerprint a machine.
+const (
+	OSLinux   = "linux"
+	OSWindows = "windows"
+	OSDarwin  = "darwin"
+	OSAndroid = "android"
+	OSIOS     = "ios"
+	OSOpenWrt = "openwrt"
+	OSOther   = "other"
+)
+
+// DNS resolver kinds (net.resolver).
+const (
+	ResolverISP       = "isp"
+	ResolverPublic    = "public"
+	ResolverEncrypted = "encrypted"
+	ResolverVPN       = "vpn"
+	ResolverUnknown   = "unknown"
+)
+
+// OSes returns all accepted values of agent.os.
+func OSes() []string {
+	return []string{OSLinux, OSWindows, OSDarwin, OSAndroid, OSIOS, OSOpenWrt, OSOther}
+}
+
+// Resolvers returns all accepted values of net.resolver.
+func Resolvers() []string {
+	return []string{ResolverISP, ResolverPublic, ResolverEncrypted, ResolverVPN, ResolverUnknown}
+}
+
 // Verdicts returns all known verdicts.
 func Verdicts() []Verdict {
 	return []Verdict{

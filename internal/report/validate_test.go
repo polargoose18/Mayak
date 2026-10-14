@@ -32,6 +32,11 @@ func TestValidateGolden(t *testing.T) {
 		{file: "odd_ts"},
 		{file: "too_large", wantErr: ErrTooLarge},
 		{file: "unknown_verdict", wantErr: ErrInvalid},
+		{file: "bad_os_login", wantErr: ErrInvalid},
+		{file: "bad_region_address", wantErr: ErrInvalid},
+		{file: "bad_ver_ip", wantErr: ErrInvalid},
+		{file: "empty_results", wantErr: ErrInvalid},
+		{file: "too_many_results", wantErr: ErrInvalid},
 	}
 	for _, tc := range tests {
 		t.Run(tc.file, func(t *testing.T) {
@@ -106,6 +111,43 @@ func TestValidateRejects(t *testing.T) {
 		{"country one letter", func(m map[string]any) { m["net"].(map[string]any)["country"] = "R" }},
 		{"country three letters", func(m map[string]any) { m["net"].(map[string]any)["country"] = "RUS" }},
 		{"country second not letter", func(m map[string]any) { m["net"].(map[string]any)["country"] = "R1" }},
+		{"ip_ver 5", func(m map[string]any) { m["net"].(map[string]any)["ip_ver"] = 5 }},
+		{"ip_ver 0", func(m map[string]any) { m["net"].(map[string]any)["ip_ver"] = 0 }},
+		{"ip_ver 44", func(m map[string]any) { m["net"].(map[string]any)["ip_ver"] = 44 }},
+		{"os with arch", func(m map[string]any) { m["agent"].(map[string]any)["os"] = "linux/arm64" }},
+		{"os uppercase", func(m map[string]any) { m["agent"].(map[string]any)["os"] = "Linux" }},
+		{"os empty", func(m map[string]any) { m["agent"].(map[string]any)["os"] = "" }},
+		{"ver three parts", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "0.3.1" }},
+		{"ver one part", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "3" }},
+		{"ver four digits", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "1000.1" }},
+		{"ver with v", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "v0.3" }},
+		{"ver trailing dot", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "0." }},
+		{"ver Dev", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "Dev" }},
+		{"resolver unknown value", func(m map[string]any) { m["net"].(map[string]any)["resolver"] = "8.8.8.8" }},
+		{"resolver empty", func(m map[string]any) { m["net"].(map[string]any)["resolver"] = "" }},
+		{"region city", func(m map[string]any) { m["net"].(map[string]any)["region"] = "Moscow" }},
+		{"region lowercase", func(m map[string]any) { m["net"].(map[string]any)["region"] = "ru-mow" }},
+		{"region no dash", func(m map[string]any) { m["net"].(map[string]any)["region"] = "RUMOW" }},
+		{"region too long", func(m map[string]any) { m["net"].(map[string]any)["region"] = "RU-MOSC" }},
+		{"region empty", func(m map[string]any) { m["net"].(map[string]any)["region"] = "" }},
+		{"region two dashes", func(m map[string]any) { m["net"].(map[string]any)["region"] = "RU-MO-W" }},
+		{"targets_rev free text", func(m map[string]any) { m["targets_rev"] = "alice" }},
+		{"targets_rev no number", func(m map[string]any) { m["targets_rev"] = "2026-10-13" }},
+		{"targets_rev short date", func(m map[string]any) { m["targets_rev"] = "2026-1-13.1" }},
+		{"targets_rev long number", func(m map[string]any) { m["targets_rev"] = "2026-10-13.12345" }},
+		{"targets_rev two dots", func(m map[string]any) { m["targets_rev"] = "2026-10-13.1.2" }},
+		{"target with uppercase", func(m map[string]any) { firstResult(m)["target"] = "Example" }},
+		{"target with dot", func(m map[string]any) { firstResult(m)["target"] = "example.org" }},
+		{"target empty", func(m map[string]any) { firstResult(m)["target"] = "" }},
+		{"target 65 chars", func(m map[string]any) { firstResult(m)["target"] = strings.Repeat("a", 65) }},
+		{"no results", func(m map[string]any) { m["results"] = []any{} }},
+		{"201 results", func(m map[string]any) {
+			r := make([]any, MaxResults+1)
+			for i := range r {
+				r[i] = map[string]any{"target": "a", "test": "dns", "verdict": "ok"}
+			}
+			m["results"] = r
+		}},
 		{"unknown test", func(m map[string]any) { firstResult(m)["test"] = "ping" }},
 		{"unknown verdict", func(m map[string]any) { firstResult(m)["verdict"] = "blocked" }},
 		{"evidence string too long", func(m map[string]any) { firstResult(m)["evidence"] = map[string]any{"e": longStr} }},
@@ -162,9 +204,22 @@ func TestValidateAcceptsEdgeCases(t *testing.T) {
 	}{
 		{"empty country", func(m map[string]any) { m["net"].(map[string]any)["country"] = "" }},
 		{"source web", func(m map[string]any) { m["agent"].(map[string]any)["source"] = "web" }},
-		{"region set", func(m map[string]any) { m["net"].(map[string]any)["region"] = "Moscow" }},
+		{"region set", func(m map[string]any) { m["net"].(map[string]any)["region"] = "RU-MOW" }},
+		{"region with digits", func(m map[string]any) { m["net"].(map[string]any)["region"] = "RU-S01" }},
+		{"region null", func(m map[string]any) { m["net"].(map[string]any)["region"] = nil }},
+		{"ver dev", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "dev" }},
+		{"ver three digits", func(m map[string]any) { m["agent"].(map[string]any)["ver"] = "123.456" }},
+		{"ip_ver 6", func(m map[string]any) { m["net"].(map[string]any)["ip_ver"] = 6 }},
+		{"target 64 chars with dash and digits", func(m map[string]any) { firstResult(m)["target"] = "a-1" + strings.Repeat("b", 61) }},
+		{"200 results", func(m map[string]any) {
+			r := make([]any, MaxResults)
+			for i := range r {
+				r[i] = map[string]any{"target": "a", "test": "dns", "verdict": "ok"}
+			}
+			m["results"] = r
+		}},
+		{"targets_rev with long number", func(m map[string]any) { m["targets_rev"] = "2026-10-13.1234" }},
 		{"region absent", func(m map[string]any) { delete(m["net"].(map[string]any), "region") }},
-		{"empty results", func(m map[string]any) { m["results"] = []any{} }},
 		{"no evidence", func(m map[string]any) { delete(firstResult(m), "evidence") }},
 		{"evidence string at limit", func(m map[string]any) {
 			firstResult(m)["evidence"] = map[string]any{"e": strings.Repeat("я", MaxEvidenceString)}
@@ -193,6 +248,71 @@ func TestValidateAllKnownValues(t *testing.T) {
 				t.Errorf("verdict %q test %q: %v", v, tst, err)
 			}
 		}
+	}
+}
+
+func TestValidateAllOSesAndResolvers(t *testing.T) {
+	for _, os := range OSes() {
+		for _, res := range Resolvers() {
+			b := mutate(t, func(m map[string]any) {
+				m["agent"].(map[string]any)["os"] = os
+				m["net"].(map[string]any)["resolver"] = res
+			})
+			if _, err := Validate(b); err != nil {
+				t.Errorf("os %q resolver %q: %v", os, res, err)
+			}
+		}
+	}
+}
+
+func TestValidateAt(t *testing.T) {
+	now := time.Date(2026, 10, 13, 12, 40, 0, 0, time.UTC)
+	tests := []struct {
+		ts string
+		ok bool
+	}{
+		{"2026-10-13T12:30:00Z", true},
+		{"2026-10-13T12:44:59Z", true},       // within 5 minutes ahead
+		{"2026-10-13T12:45:00Z", true},       // exactly 5 minutes ahead
+		{"2026-10-13T12:45:01Z", false},      // just over
+		{"2026-10-12T12:40:00Z", true},       // exactly 24 hours old
+		{"2026-10-12T12:39:59Z", false},      // just over
+		{"2026-10-12T15:40:00+03:00", true},  // offsets are honoured: 12:40Z
+		{"2026-10-12T14:00:00+03:00", false}, // 11:00Z is too old
+		{"2099-01-01T00:00:00Z", false},      // far future
+		{"2020-01-01T00:00:00Z", false},      // far past
+	}
+	for _, tc := range tests {
+		t.Run(tc.ts, func(t *testing.T) {
+			r, err := ValidateAt(mutate(t, func(m map[string]any) { m["ts"] = tc.ts }), now)
+			if tc.ok {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if r.TS.Minute()%5 != 0 || r.TS.Second() != 0 {
+					t.Errorf("ts %v is not rounded", r.TS)
+				}
+				return
+			}
+			if !errors.Is(err, ErrInvalid) || r != nil {
+				t.Errorf("r = %v, err = %v; want ErrInvalid", r, err)
+			}
+		})
+	}
+
+	// The checks of Validate still apply.
+	if _, err := ValidateAt(readTestdata(t, "bad_os_login.json"), now); !errors.Is(err, ErrInvalid) {
+		t.Errorf("bad os: err = %v", err)
+	}
+	if _, err := ValidateAt(make([]byte, MaxReportSize+1), now); !errors.Is(err, ErrTooLarge) {
+		t.Errorf("too large: err = %v", err)
+	}
+	// Validate itself does not look at the clock.
+	if _, err := Validate(readTestdata(t, "ts_2099.json")); err != nil {
+		t.Errorf("Validate must accept any ts: %v", err)
+	}
+	if _, err := ValidateAt(readTestdata(t, "ts_2099.json"), now); !errors.Is(err, ErrInvalid) {
+		t.Errorf("ts 2099: err = %v", err)
 	}
 }
 
@@ -251,9 +371,25 @@ func TestValidateDropsUnknownFields(t *testing.T) {
 }
 
 func TestErrorsDoNotEchoInput(t *testing.T) {
-	const secret = "203.0.113.7"
-	_, err := Validate(mutate(t, func(m map[string]any) { m["report_id"] = secret }))
-	if err == nil || strings.Contains(err.Error(), secret) {
-		t.Errorf("err = %v, must not contain input value", err)
+	const secret = "alice@203.0.113.7"
+	edits := map[string]func(m map[string]any){
+		"report_id":   func(m map[string]any) { m["report_id"] = secret },
+		"os":          func(m map[string]any) { m["agent"].(map[string]any)["os"] = secret },
+		"ver":         func(m map[string]any) { m["agent"].(map[string]any)["ver"] = secret },
+		"source":      func(m map[string]any) { m["agent"].(map[string]any)["source"] = secret },
+		"resolver":    func(m map[string]any) { m["net"].(map[string]any)["resolver"] = secret },
+		"region":      func(m map[string]any) { m["net"].(map[string]any)["region"] = secret },
+		"country":     func(m map[string]any) { m["net"].(map[string]any)["country"] = secret },
+		"targets_rev": func(m map[string]any) { m["targets_rev"] = secret },
+		"target":      func(m map[string]any) { firstResult(m)["target"] = secret },
+		"test":        func(m map[string]any) { firstResult(m)["test"] = secret },
+		"verdict":     func(m map[string]any) { firstResult(m)["verdict"] = secret },
+		"evidence":    func(m map[string]any) { firstResult(m)["evidence"] = map[string]any{"e": strings.Repeat(secret, 20)} },
+	}
+	for name, edit := range edits {
+		_, err := Validate(mutate(t, edit))
+		if err == nil || strings.Contains(err.Error(), "203.0.113.7") || strings.Contains(err.Error(), "alice") {
+			t.Errorf("%s: err = %v, must fail without echoing the input", name, err)
+		}
 	}
 }

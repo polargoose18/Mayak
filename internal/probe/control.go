@@ -27,6 +27,7 @@ import (
 //	    200 {"reachable": bool}: the node tries a TCP connect to the host on
 //	    port 443 from outside the filtered zone.
 //	GET /v1/fetch?host=<host>&path=<path>
+//	    path is ControlPathRoot or ControlPathRobots, nothing else.
 //	    200 {"status": int, "size": int, "body_hash": "<hex sha-256>"}: the
 //	    node makes the same request as the http test (HTTPS on port 443 with
 //	    SNI host, no redirects, at most MaxBody bytes, the body decoded as
@@ -46,13 +47,25 @@ import (
 //   - It logs no client addresses.
 //
 // Consequences: the node's view of the target ("from outside") may come from
-// another CDN node than the agent's. For /v1/fetch the path must be static
-// (the home page or /robots.txt), otherwise the body hashes differ.
+// another CDN node than the agent's. For /v1/fetch the path must be static,
+// otherwise the body hashes differ; Reference enforces it with
+// ErrBadControlPath, and the node should refuse any other path as well.
 type ControlClient struct {
 	BaseURL string // e.g. https://ctrl.example:8443
 
 	roots *x509.CertPool // test override for the trusted CAs
 }
+
+// The only paths /v1/fetch is asked for: pages that are the same for every
+// visitor, so the body hashes of the node and of the agent can agree.
+const (
+	ControlPathRoot   = "/"
+	ControlPathRobots = "/robots.txt"
+)
+
+// ErrBadControlPath is returned by Reference for a path that is not one of
+// ControlPathRoot and ControlPathRobots. Nothing is sent then.
+var ErrBadControlPath = errors.New("control fetch: path must be / or /robots.txt")
 
 const maxControlReply = 64 << 10
 
@@ -80,6 +93,9 @@ func (c ControlClient) Reach(ctx context.Context, host string) (classify.Externa
 
 // Reference asks the node for its response to the http test's request.
 func (c ControlClient) Reference(ctx context.Context, host, path string) (*classify.HTTPResponse, error) {
+	if path != ControlPathRoot && path != ControlPathRobots {
+		return nil, ErrBadControlPath // the value is not repeated: it may be anything
+	}
 	var reply struct {
 		Status   int    `json:"status"`
 		Size     int64  `json:"size"`

@@ -168,13 +168,13 @@ func (p pipeline) run(t *testing.T) classify.Observation {
 	o.TLS = tlsObs.Handshakes()
 
 	stubs := learnStubHashes(t, env)
-	h, err := HTTP(c, HTTPRequest{Addr: target, Host: host, Path: "/page", KnownStubHashes: stubs, roots: env.CertPool})
+	h, err := HTTP(c, HTTPRequest{Addr: target, Host: host, Path: ControlPathRobots, KnownStubHashes: stubs, roots: env.CertPool})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Without a reference (the node could not fetch the page either) the
 	// classifier works with what it has.
-	ref, _ := ControlClient{BaseURL: ctrl.srv.URL}.Reference(c, host, "/page")
+	ref, _ := ControlClient{BaseURL: ctrl.srv.URL}.Reference(c, host, ControlPathRobots)
 	o.HTTP = h.ForClassifier(ref)
 
 	ctrlCtx := c
@@ -217,7 +217,7 @@ func learnStubHashes(t *testing.T, env *mockdpi.Env) []string {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), generous)
 	defer cancel()
-	obs, err := HTTP(ctx, HTTPRequest{Addr: addr(t, env.StubPageTLS), Host: dnsHost, Path: "/page", roots: env.CertPool})
+	obs, err := HTTP(ctx, HTTPRequest{Addr: addr(t, env.StubPageTLS), Host: dnsHost, Path: ControlPathRobots, roots: env.CertPool})
 	if err != nil {
 		t.Fatal(err)
 	}

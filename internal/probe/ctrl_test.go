@@ -5,11 +5,13 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"net/url"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -209,6 +211,52 @@ func TestControlClientTruncatedReply(t *testing.T) {
 	}
 }
 
+// The control node is asked for a static page only, so that the body hashes
+// of the node and of the agent can agree. Anything else is refused before a
+// request is made.
+func TestReferenceAllowsOnlyStaticPaths(t *testing.T) {
+	var hits atomic.Int32
+	var lastPath atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		lastPath.Store(r.URL.Query().Get("path"))
+		_, _ = w.Write([]byte(`{"status":200,"size":5,"body_hash":"abc"}`))
+	}))
+	defer srv.Close()
+	c := ControlClient{BaseURL: srv.URL}
+	ctx := context.Background()
+
+	for _, path := range []string{"/", "/robots.txt"} {
+		before := hits.Load()
+		ref, err := c.Reference(ctx, "example.org", path)
+		if err != nil || ref == nil {
+			t.Errorf("%q: %v", path, err)
+			continue
+		}
+		if hits.Load() != before+1 || lastPath.Load() != path {
+			t.Errorf("%q: the request did not reach the node as sent (path %v)", path, lastPath.Load())
+		}
+	}
+
+	hits.Store(0)
+	for _, path := range []string{
+		"", "/a", "//evil", "/robots.txt?x=1", "/?x=1", "/robots.txt#f", "/robots.txt/", "/ROBOTS.txt", "robots.txt",
+		"/ ", " /", "/ robots.txt", "/robots.txt ", "/robots.txt\n", "/\n", "/\r\n", "\t/", "/robots.txt\x00",
+		"/../robots.txt", "/./robots.txt", "/%72obots.txt", "http://example.org/", "/robots.txt\u00a0", "//", "/index.html",
+	} {
+		ref, err := c.Reference(ctx, "example.org", path)
+		if !errors.Is(err, ErrBadControlPath) || ref != nil {
+			t.Errorf("%q: got %v, %v; want ErrBadControlPath", path, ref, err)
+		}
+		if strings.Contains(fmt.Sprint(err), "evil") {
+			t.Errorf("the error repeats the path: %v", err)
+		}
+	}
+	if n := hits.Load(); n != 0 {
+		t.Errorf("the node was called %d times for paths that must be refused", n)
+	}
+}
+
 func TestControlClientReference(t *testing.T) {
 	var got atomic.Value
 	reply := `{"status":200,"size":12,"body_hash":"abc"}`
@@ -221,7 +269,7 @@ func TestControlClientReference(t *testing.T) {
 	defer srv.Close()
 	c := ControlClient{BaseURL: srv.URL}
 
-	ref, err := c.Reference(context.Background(), "example.org", "/p?x=1")
+	ref, err := c.Reference(context.Background(), "example.org", ControlPathRobots)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,16 +277,16 @@ func TestControlClientReference(t *testing.T) {
 		t.Errorf("ref = %+v", ref)
 	}
 	// The client names the host and the path, no ip and no port.
-	if q := got.Load().(url.Values); len(q) != 2 || q.Get("host") != "example.org" || q.Get("path") != "/p?x=1" {
+	if q := got.Load().(url.Values); len(q) != 2 || q.Get("host") != "example.org" || q.Get("path") != ControlPathRobots {
 		t.Errorf("query = %v, want only host and path", q)
 	}
 
 	reply = `{"status":0}`
-	if _, err := c.Reference(context.Background(), "example.org", "/"); err == nil {
+	if _, err := c.Reference(context.Background(), "example.org", ControlPathRoot); err == nil {
 		t.Error("incomplete reply: want error")
 	}
 	status, reply = http.StatusBadGateway, `{}`
-	if _, err := c.Reference(context.Background(), "example.org", "/"); err == nil {
+	if _, err := c.Reference(context.Background(), "example.org", ControlPathRoot); err == nil {
 		t.Error("502: want error")
 	}
 }

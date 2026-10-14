@@ -8,8 +8,9 @@ permissions:
   contents: read
 
 jobs:
+  # The runner image is pinned: ubuntu-latest moves to a new Ubuntu release on 19 October 2026.
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
@@ -24,7 +25,7 @@ jobs:
   # Only on release tags: a release must not carry the test key.
   release-check:
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       - run: make release-check

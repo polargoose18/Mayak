@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 	"unicode/utf8"
 )
 
@@ -35,13 +36,27 @@ func Categories() []Category {
 	}
 }
 
-// ErrInvalid is returned for a list that breaks the format rules.
-var ErrInvalid = errors.New("invalid targets")
+// Format limits.
+const (
+	// CurrentVersion is the newest list format this code understands.
+	CurrentVersion = 1
+
+	// MaxLifetime is how far ahead of the signing time a list may expire.
+	MaxLifetime = 30 * 24 * time.Hour
+)
+
+var (
+	// ErrInvalid is returned for a list that breaks the format rules.
+	ErrInvalid = errors.New("invalid targets")
+	// ErrExpired is returned for a list whose expires is in the past.
+	ErrExpired = errors.New("targets list expired")
+	// ErrUnsupportedVersion is returned for a list with a newer format version.
+	ErrUnsupportedVersion = errors.New("unsupported targets format version")
+	// ErrRollback is returned when a list is older than the one already held.
+	ErrRollback = errors.New("targets list is older than the stored one")
+)
 
 // Target is one service the agent may probe.
-//
-// The field order is part of the canonical form (see canonical in sign.go);
-// do not reorder fields.
 type Target struct {
 	ID        string   `json:"id"`
 	Host      string   `json:"host"`
@@ -50,18 +65,35 @@ type Target struct {
 	Rev       string   `json:"rev"`
 }
 
-// Targets is a versioned list of targets, e.g. Rev "2026-10-13.1".
+// Targets is a versioned list of targets.
+//
+// V is the format version. Rev is the revision, "YYYY-MM-DD.N" (e.g.
+// "2026-10-13.1"), which only grows: see CheckRev. Expires is when the list
+// stops being valid, at most MaxLifetime after it was signed, so that an old
+// signed list cannot be replayed for ever.
 type Targets struct {
-	Rev   string   `json:"rev"`
-	Items []Target `json:"items"`
+	V       int       `json:"v"`
+	Rev     string    `json:"rev"`
+	Expires time.Time `json:"expires"`
+	Items   []Target  `json:"items"`
 }
 
 func invalid(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrInvalid, fmt.Sprintf(format, args...))
 }
 
-// validate checks the list against the format rules.
+// validate checks the content of the list against the format rules. It does
+// not look at the clock.
 func (t Targets) validate() error {
+	if t.V < 1 {
+		return invalid("v is missing")
+	}
+	if _, err := parseRev(t.Rev); err != nil {
+		return err
+	}
+	if t.Expires.IsZero() {
+		return invalid("expires is missing")
+	}
 	if len(t.Items) == 0 {
 		return invalid("list is empty")
 	}
@@ -90,6 +122,18 @@ func (t Targets) validate() error {
 		if utf8.RuneCountInString(it.Rationale) < MinRationaleLen {
 			return invalid("items[%d]: rationale shorter than %d chars", i, MinRationaleLen)
 		}
+	}
+	return nil
+}
+
+// checkClock checks expires against now: it must be in the future and not
+// further than MaxLifetime ahead.
+func (t Targets) checkClock(now time.Time) error {
+	switch {
+	case !now.Before(t.Expires):
+		return ErrExpired
+	case t.Expires.After(now.Add(MaxLifetime)):
+		return invalid("expires is more than %d days ahead", int(MaxLifetime/(24*time.Hour)))
 	}
 	return nil
 }

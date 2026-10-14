@@ -7,13 +7,14 @@ import (
 )
 
 // PublicKeys returns the ed25519 public keys the agent trusts for the
-// targets list. A list signed by any of them is accepted (see VerifyAny),
-// which is what makes key rotation possible: see docs/KEYS.md.
+// targets list. A list signed by any of them is accepted (see Verify), which
+// is what makes key rotation possible: see docs/KEYS.md.
 func PublicKeys() []ed25519.PublicKey {
 	// ЗАМЕНИТЬ реальным перед релизом. Это тестовый ключ, его приватная часть
-	// не сохранена, поэтому подписать список им нельзя.
+	// не сохранена, поэтому подписать список им нельзя. Метка TESTKEY ниже
+	// нужна цели `make release-check`: пока она есть в файле, релиз невозможен.
 	encoded := []string{
-		"RHWyg49gLrR1LzXlx87zsuGZs6/66I0W+rB0PEPH/5U=",
+		"RHWyg49gLrR1LzXlx87zsuGZs6/66I0W+rB0PEPH/5U=", // TESTKEY
 	}
 
 	keys := make([]ed25519.PublicKey, 0, len(encoded))

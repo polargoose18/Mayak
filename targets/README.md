@@ -4,14 +4,16 @@
 
 ## Формат
 
-Файл — JSON-документ `{"payload": <Targets>, "sig": "<base64 ed25519>"}`. Образец: [targets.example.json](targets.example.json). Цели в нём вымышленные, подпись в нём не настоящая.
+Подписанный файл — JSON-документ `{"payload": "<base64 точных байт JSON>", "sig": "<base64 ed25519>"}`. Подпись считается над байтами payload как они есть. Образец: [targets.example.json](targets.example.json); тот же payload в читаемом виде: [targets.example.payload.json](targets.example.payload.json). Цели в образце вымышленные, подпись в нём не настоящая.
+
+Сам список (payload) содержит `v` (версия формата), `rev` (`ГГГГ-ММ-ДД.N`, только растёт), `expires` (срок действия, не дальше 30 дней от подписи) и `items`. Подробности: [docs/KEYS.md](../docs/KEYS.md).
 
 Поля цели:
 
 | Поле | Что это |
 | --- | --- |
 | `id` | Уникальный в списке идентификатор |
-| `host` | Имя хоста без схемы и пробелов, например `example.org` |
+| `host` | DNS-имя: ASCII, нижний регистр, не меньше двух меток, например `example.org`. Юникод только в punycode (`xn--`). Нельзя: IP-адреса, порт, путь, `*`, `@`, схему, точку в конце, внутренние зоны (`localhost`, `.local`, `.internal`, `.lan`, `.home.arpa`, `.test`, `.invalid`) и дубликаты |
 | `category` | Одна из: `ai`, `video`, `messenger`, `dev`, `social`, `infra` |
 | `rationale` | Обоснование, не короче 20 символов |
 | `rev` | Ревизия, в которой цель добавлена или изменена |

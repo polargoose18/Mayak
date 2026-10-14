@@ -7,58 +7,54 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 )
 
-// ErrBadSignature is returned when the signature does not match the payload.
+// ErrBadSignature is returned when no key matches the signature.
 var ErrBadSignature = errors.New("bad signature")
 
-// file is the on-disk format: {"payload": <Targets>, "sig": "<base64>"}.
-type file struct {
-	Payload json.RawMessage `json:"payload"`
-	Sig     string          `json:"sig"`
-}
-
-// canonical returns the bytes that are signed.
+// File format (v2):
 //
-// Canonical form: the Targets value is serialized by encoding/json from the
-// Go structs, not taken from the file as is. That fixes the three things that
-// otherwise make JSON ambiguous: field order is the struct declaration order
-// (rev, items; id, host, category, rationale, rev), there is no whitespace,
-// and strings use Go's escaping with HTML escaping turned off. The order of
-// items is part of the signed data. Verify re-serializes the parsed payload
-// the same way, so indentation or key order in the file do not matter, and
-// what is verified is exactly what was parsed. Another implementation must
-// reproduce this byte for byte (compact JSON, that field order).
-func canonical(t Targets) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(t); err != nil {
-		return nil, err
-	}
-	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
+//	{"payload": "<base64 of the exact JSON bytes>", "sig": "<base64 ed25519>"}
+//
+// The signature is over the payload bytes exactly as they are. Nothing is
+// parsed before the signature is checked and nothing is serialized again
+// afterwards, so there is no canonical form to agree on: the signer may use
+// any field order and whitespace, and a verifier sees the bytes the signer
+// signed. Because the signature covers every byte, fields that an older agent
+// does not know are ignored by it (they are signed, not injected); an
+// incompatible change is announced by raising v.
+type file struct {
+	Payload string `json:"payload"`
+	Sig     string `json:"sig"`
 }
 
-// Sign validates t and returns the signed targets file.
-func Sign(priv ed25519.PrivateKey, t Targets) ([]byte, error) {
+// Sign validates the payload (a JSON Targets document) and returns the signed
+// file. The payload bytes are signed as they are. Unknown fields in the
+// payload are refused here, because a typo would otherwise be signed; now is
+// the signing time, against which expires is checked.
+func Sign(priv ed25519.PrivateKey, payload []byte, now time.Time) ([]byte, error) {
 	if len(priv) != ed25519.PrivateKeySize {
 		return nil, errors.New("sign targets: invalid private key size")
 	}
-	if err := t.validate(); err != nil {
+	t, err := ParseUnsigned(payload)
+	if err != nil {
 		return nil, fmt.Errorf("sign targets: %w", err)
 	}
-	return signUnchecked(priv, t)
+	if t.V != CurrentVersion {
+		return nil, fmt.Errorf("sign targets: %w: v is %d, this tool signs v%d", ErrUnsupportedVersion, t.V, CurrentVersion)
+	}
+	if err := t.checkClock(now); err != nil {
+		return nil, fmt.Errorf("sign targets: %w", err)
+	}
+	return signBytes(priv, payload)
 }
 
-func signUnchecked(priv ed25519.PrivateKey, t Targets) ([]byte, error) {
-	payload, err := canonical(t)
-	if err != nil {
-		return nil, fmt.Errorf("canonicalize targets: %w", err)
-	}
-	sig := ed25519.Sign(priv, payload)
+// signBytes signs the bytes without looking at them.
+func signBytes(priv ed25519.PrivateKey, payload []byte) ([]byte, error) {
 	out, err := json.Marshal(file{
-		Payload: payload,
-		Sig:     base64.StdEncoding.EncodeToString(sig),
+		Payload: base64.StdEncoding.EncodeToString(payload),
+		Sig:     base64.StdEncoding.EncodeToString(ed25519.Sign(priv, payload)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("encode targets file: %w", err)
@@ -66,91 +62,125 @@ func signUnchecked(priv ed25519.PrivateKey, t Targets) ([]byte, error) {
 	return out, nil
 }
 
-// decode parses the file format strictly and returns the payload and the
-// raw signature. It does not check the signature.
-func decode(data []byte) (*Targets, []byte, error) {
-	var f file
-	if err := strictUnmarshal(data, &f); err != nil {
-		return nil, nil, invalid("file: %v", err)
-	}
-	if len(f.Payload) == 0 {
-		return nil, nil, invalid("missing payload")
-	}
-	if f.Sig == "" {
-		return nil, nil, invalid("missing sig")
-	}
-	sig, err := base64.StdEncoding.DecodeString(f.Sig)
-	if err != nil {
-		return nil, nil, invalid("sig is not base64")
-	}
-	var t Targets
-	if err := strictUnmarshal(f.Payload, &t); err != nil {
-		return nil, nil, invalid("payload: %v", err)
-	}
-	return &t, sig, nil
-}
-
-// strictUnmarshal rejects unknown fields and trailing data. Unknown fields in
-// the payload are rejected because the signature would not cover them.
-func strictUnmarshal(data []byte, v any) error {
+// ParseUnsigned reads a list without a signature (the bare Targets JSON) and
+// checks its content against the format rules. Unknown fields are refused.
+// It does not look at the clock.
+func ParseUnsigned(data []byte) (*Targets, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
-		return err
+	var t Targets
+	if err := dec.Decode(&t); err != nil {
+		return nil, invalid("targets: %v", err)
 	}
 	if dec.More() {
-		return errors.New("trailing data")
-	}
-	return nil
-}
-
-// Verify checks the signature of a targets file and the format rules, and
-// returns the list. The signature is checked first, so nothing from an
-// unsigned file is interpreted beyond parsing.
-func Verify(pub ed25519.PublicKey, data []byte) (*Targets, error) {
-	if len(pub) != ed25519.PublicKeySize {
-		return nil, errors.New("verify targets: invalid public key size")
-	}
-	t, sig, err := decode(data)
-	if err != nil {
-		return nil, fmt.Errorf("verify targets: %w", err)
-	}
-	payload, err := canonical(*t)
-	if err != nil {
-		return nil, fmt.Errorf("canonicalize targets: %w", err)
-	}
-	if !ed25519.Verify(pub, payload, sig) {
-		return nil, fmt.Errorf("verify targets: %w", ErrBadSignature)
-	}
-	if err := t.validate(); err != nil {
-		return nil, fmt.Errorf("verify targets: %w", err)
-	}
-	return t, nil
-}
-
-// VerifyAny is like Verify, but accepts a signature by any of the keys.
-func VerifyAny(pubs []ed25519.PublicKey, data []byte) (*Targets, error) {
-	if len(pubs) == 0 {
-		return nil, errors.New("verify targets: no public keys")
-	}
-	for _, pub := range pubs {
-		t, err := Verify(pub, data)
-		if !errors.Is(err, ErrBadSignature) {
-			return t, err // success, or an error that another key will not fix
-		}
-	}
-	return nil, fmt.Errorf("verify targets: %w", ErrBadSignature)
-}
-
-// ParseUnsigned reads a targets list without a signature (the bare Targets
-// JSON) and checks it against the same format rules as Verify.
-func ParseUnsigned(data []byte) (*Targets, error) {
-	var t Targets
-	if err := strictUnmarshal(data, &t); err != nil {
-		return nil, invalid("targets: %v", err)
+		return nil, invalid("targets: trailing data")
 	}
 	if err := t.validate(); err != nil {
 		return nil, err
 	}
 	return &t, nil
+}
+
+// Verify checks that the file is signed by one of the keys, reads the list
+// and checks it: the format version, the content rules and the clock (not
+// expired, and expiring at most MaxLifetime from now). Any of the keys may
+// have signed it, which is what makes key rotation possible (docs/KEYS.md).
+func Verify(pubs []ed25519.PublicKey, data []byte, now time.Time) (*Targets, error) {
+	t, err := Open(pubs, data)
+	if err != nil {
+		return nil, err
+	}
+	if err := t.checkClock(now); err != nil {
+		return nil, fmt.Errorf("verify targets: %w", err)
+	}
+	return t, nil
+}
+
+// Open is Verify without the clock check: the signature, the format version
+// and the content rules.
+func Open(pubs []ed25519.PublicKey, data []byte) (*Targets, error) {
+	for _, pub := range pubs {
+		if len(pub) != ed25519.PublicKeySize {
+			return nil, errors.New("verify targets: invalid public key size")
+		}
+	}
+	if len(pubs) == 0 {
+		return nil, errors.New("verify targets: no public keys")
+	}
+	payload, sig, err := decode(data)
+	if err != nil {
+		return nil, fmt.Errorf("verify targets: %w", err)
+	}
+
+	// The signature first: nothing of an unsigned payload is interpreted.
+	if !verifiedByAny(pubs, payload, sig) {
+		return nil, fmt.Errorf("verify targets: %w", ErrBadSignature)
+	}
+
+	var t Targets // unknown fields are ignored: they are signed
+	if err := json.Unmarshal(payload, &t); err != nil {
+		return nil, fmt.Errorf("verify targets: %w", invalid("payload: %v", err))
+	}
+	if t.V > CurrentVersion {
+		return nil, fmt.Errorf("verify targets: %w: v is %d, this agent knows up to %d", ErrUnsupportedVersion, t.V, CurrentVersion)
+	}
+	if err := t.validate(); err != nil {
+		return nil, fmt.Errorf("verify targets: %w", err)
+	}
+	return &t, nil
+}
+
+// StoredRev returns the rev of a signed file without checking the signature.
+// It is for the owner's own file, to keep revs growing when signing; an agent
+// must use Open or Verify.
+func StoredRev(data []byte) (string, error) {
+	payload, _, err := decode(data)
+	if err != nil {
+		return "", err
+	}
+	var t struct {
+		Rev string `json:"rev"`
+	}
+	if err := json.Unmarshal(payload, &t); err != nil {
+		return "", invalid("payload: %v", err)
+	}
+	if _, err := parseRev(t.Rev); err != nil {
+		return "", err
+	}
+	return t.Rev, nil
+}
+
+// decode splits the file into the payload bytes and the signature. Unknown
+// fields next to payload and sig are ignored: they are not signed, so they
+// carry no meaning.
+func decode(data []byte) (payload, sig []byte, err error) {
+	var f file
+	if err := json.Unmarshal(data, &f); err != nil {
+		return nil, nil, invalid("file: %v", err)
+	}
+	if f.Payload == "" {
+		return nil, nil, invalid("missing payload")
+	}
+	if f.Sig == "" {
+		return nil, nil, invalid("missing sig")
+	}
+	if payload, err = base64.StdEncoding.DecodeString(f.Payload); err != nil {
+		return nil, nil, invalid("payload is not base64")
+	}
+	if sig, err = base64.StdEncoding.DecodeString(f.Sig); err != nil {
+		return nil, nil, invalid("sig is not base64")
+	}
+	return payload, sig, nil
+}
+
+func verifiedByAny(pubs []ed25519.PublicKey, payload, sig []byte) bool {
+	if len(sig) != ed25519.SignatureSize {
+		return false
+	}
+	for _, pub := range pubs {
+		if ed25519.Verify(pub, payload, sig) {
+			return true
+		}
+	}
+	return false
 }

@@ -9,26 +9,44 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/polargoose18/mayak/internal/targets"
 )
 
-const unsignedList = `{
-  "rev": "2026-10-13.1",
+// testNow is the clock of these tests.
+var testNow = time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC)
+
+// list returns an unsigned list with the given rev and expiry.
+func list(rev string, expires time.Time) string {
+	return `{
+  "v": 1,
+  "rev": "` + rev + `",
+  "expires": "` + expires.Format(time.RFC3339) + `",
   "items": [
-    {"id": "a", "host": "example.org", "category": "infra", "rationale": "Fictional target number one.", "rev": "2026-10-13.1"},
-    {"id": "b", "host": "example.net", "category": "dev", "rationale": "Fictional target number two.", "rev": "2026-10-13.1"}
+    {"id": "a", "host": "example.org", "category": "infra", "rationale": "Fictional target number one.", "rev": "` + rev + `"},
+    {"id": "b", "host": "example.net", "category": "dev", "rationale": "Fictional target number two.", "rev": "` + rev + `"}
   ]
 }
 `
+}
 
-func run(t *testing.T, args ...string) (stdout, stderr string, err error) {
+var okList = list("2026-10-13.1", testNow.Add(14*24*time.Hour))
+
+func runAt(t *testing.T, now time.Time, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
 	var out, errBuf bytes.Buffer
-	cmd := newRootCmd()
+	cmd := newRootCmdAt(func() time.Time { return now })
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)
 	cmd.SetArgs(args)
 	err = cmd.Execute()
 	return out.String(), errBuf.String(), err
+}
+
+func run(t *testing.T, args ...string) (stdout, stderr string, err error) {
+	t.Helper()
+	return runAt(t, testNow, args...)
 }
 
 func write(t *testing.T, path, content string) {
@@ -66,22 +84,32 @@ func TestKeygenSignVerifyChain(t *testing.T) {
 
 	in := filepath.Join(dir, "targets.json")
 	signed := filepath.Join(dir, "targets.signed.json")
-	write(t, in, unsignedList)
+	write(t, in, okList)
 
-	stdout, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", signed)
+	stdout, stderr, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", signed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stdout, "2 targets") {
+	if !strings.Contains(stdout, "2 targets") || !strings.Contains(stdout, "rev 2026-10-13.1") || !strings.Contains(stdout, "expires 2026-10-27T12:00:00Z") {
 		t.Errorf("sign output = %q", stdout)
+	}
+	if stderr != "" {
+		t.Errorf("unexpected stderr: %q", stderr)
 	}
 
 	stdout, _, err = run(t, "verify", "--pub", pub, "--in", signed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stdout, "OK") || !strings.Contains(stdout, "2 targets") {
+	if !strings.Contains(stdout, "OK") || !strings.Contains(stdout, "2 targets") || !strings.Contains(stdout, "expires 2026-10-27T12:00:00Z") {
 		t.Errorf("verify output = %q", stdout)
+	}
+
+	// The signed bytes are the input bytes, not a re-serialization.
+	data, _ := os.ReadFile(signed)
+	payload, _ := targets.StoredRev(data)
+	if payload != "2026-10-13.1" {
+		t.Errorf("stored rev = %q", payload)
 	}
 }
 
@@ -149,40 +177,232 @@ func TestKeygenDirNotWritable(t *testing.T) {
 	}
 }
 
+// setup makes a key and an input file and returns their paths and the public key.
+func setup(t *testing.T, input string) (pub, keyPath, in, out string) {
+	t.Helper()
+	dir := t.TempDir()
+	pub, keyPath = keygen(t, dir)
+	in = filepath.Join(dir, "targets.json")
+	out = filepath.Join(dir, "targets.signed.json")
+	write(t, in, input)
+	return pub, keyPath, in, out
+}
+
+func TestSignRefusals(t *testing.T) {
+	day := 24 * time.Hour
+	tests := []struct {
+		name  string
+		input string
+		want  string // part of the error
+	}{
+		{"expired", list("2026-10-13.1", testNow.Add(-time.Second)), "expired"},
+		{"expires now", list("2026-10-13.1", testNow), "expired"},
+		{"too far ahead", list("2026-10-13.1", testNow.Add(30*day+time.Second)), "30 days"},
+		{"newer format version", strings.Replace(okList, `"v": 1`, `"v": 2`, 1), "version"},
+		{"no version", strings.Replace(okList, `"v": 1,`, ``, 1), "v is missing"},
+		{"bad rev", list("r1", testNow.Add(14*day)), "rev"},
+		{"short rationale", strings.Replace(okList, "Fictional target number one.", "short", 1), "rationale"},
+		{"duplicate id", strings.Replace(okList, `"id": "b"`, `"id": "a"`, 1), "duplicate"},
+		{"host with scheme", strings.Replace(okList, "example.org", "https://example.org", 1), "host"},
+		{"unknown category", strings.Replace(okList, `"infra"`, `"adult"`, 1), "category"},
+		{"empty list", `{"v":1,"rev":"2026-10-13.1","expires":"2026-10-20T00:00:00Z","items":[]}`, "empty"},
+		{"not json", "nope", "targets"},
+		{"unknown field", strings.Replace(okList, `"v": 1,`, `"v": 1, "sig": "x",`, 1), "unknown field"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, keyPath, in, out := setup(t, tc.input)
+			_, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want it to mention %q", err, tc.want)
+			}
+			if _, err := os.Stat(out); err == nil {
+				t.Error("output file was created despite the error")
+			}
+		})
+	}
+}
+
+func TestSignExpiryBoundary(t *testing.T) {
+	_, keyPath, in, out := setup(t, list("2026-10-13.1", testNow.Add(30*24*time.Hour)))
+	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out); err != nil {
+		t.Errorf("exactly 30 days must be accepted: %v", err)
+	}
+}
+
+func TestSignKeepsRevsGrowing(t *testing.T) {
+	pub, keyPath, in, out := setup(t, list("2026-10-13.5", testNow.Add(14*24*time.Hour)))
+	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out); err != nil {
+		t.Fatal(err)
+	}
+	signedBefore, _ := os.ReadFile(out)
+
+	for name, tc := range map[string]struct {
+		rev  string
+		want string
+	}{
+		"older":      {"2026-10-13.4", "older"},
+		"same rev":   {"2026-10-13.5", "raise the rev"},
+		"older date": {"2026-10-12.9", "older"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			write(t, in, list(tc.rev, testNow.Add(14*24*time.Hour)))
+			_, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want it to mention %q", err, tc.want)
+			}
+			after, _ := os.ReadFile(out)
+			if !bytes.Equal(signedBefore, after) {
+				t.Error("the signed file was modified")
+			}
+		})
+	}
+
+	// Numbers compare as numbers: .10 is newer than .5 (and than .9).
+	write(t, in, list("2026-10-13.10", testNow.Add(14*24*time.Hour)))
+	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out); err != nil {
+		t.Errorf("2026-10-13.10 after .5: %v", err)
+	}
+	// A newer date wins whatever the number.
+	write(t, in, list("2026-10-14.1", testNow.Add(14*24*time.Hour)))
+	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out); err != nil {
+		t.Errorf("2026-10-14.1: %v", err)
+	}
+	if stdout, _, err := run(t, "verify", "--pub", pub, "--in", out); err != nil || !strings.Contains(stdout, "rev 2026-10-14.1") {
+		t.Errorf("verify = %q, %v", stdout, err)
+	}
+}
+
+// After a key change the old file is signed by the old key; revs must still
+// grow, and the old signature is not needed for that.
+func TestSignAfterKeyRotation(t *testing.T) {
+	dir := t.TempDir()
+	_, oldKey := keygen(t, filepath.Join(dir, "old"))
+	newPub, newKey := keygen(t, filepath.Join(dir, "new"))
+	in := filepath.Join(dir, "targets.json")
+	out := filepath.Join(dir, "signed.json")
+
+	write(t, in, list("2026-10-13.1", testNow.Add(14*24*time.Hour)))
+	if _, _, err := run(t, "sign", "--key", oldKey, "--in", in, "--out", out); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := run(t, "sign", "--key", newKey, "--in", in, "--out", out); err == nil {
+		t.Error("same rev under a new key must still be refused")
+	}
+	write(t, in, list("2026-10-13.2", testNow.Add(14*24*time.Hour)))
+	if _, _, err := run(t, "sign", "--key", newKey, "--in", in, "--out", out); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := run(t, "verify", "--pub", newPub, "--in", out); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSignRefusesToOverwriteAFileThatIsNotASignedList(t *testing.T) {
+	_, keyPath, in, out := setup(t, okList)
+	write(t, out, "precious notes\n")
+	_, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out)
+	if err == nil || !strings.Contains(err.Error(), "not a signed targets list") {
+		t.Fatalf("err = %v", err)
+	}
+	if b, _ := os.ReadFile(out); string(b) != "precious notes\n" {
+		t.Error("the file was overwritten")
+	}
+}
+
+func TestSignOutputInADirectoryThatDoesNotExist(t *testing.T) {
+	_, keyPath, in, _ := setup(t, okList)
+	out := filepath.Join(filepath.Dir(in), "no-dir", "x.json")
+	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out); err == nil {
+		t.Error("want error")
+	}
+}
+
+func TestSignOutIsADirectory(t *testing.T) {
+	_, keyPath, in, _ := setup(t, okList)
+	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", filepath.Dir(in)); err == nil {
+		t.Error("want error when --out is a directory")
+	}
+}
+
+func TestSignWarnsAboutKeyMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not meaningful on Windows")
+	}
+	_, keyPath, in, out := setup(t, okList)
+
+	_, stderr, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out)
+	if err != nil || strings.Contains(stderr, "warning") {
+		t.Errorf("0600 key: err = %v, stderr = %q", err, stderr)
+	}
+
+	if err := os.Chmod(keyPath, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	write(t, in, list("2026-10-13.2", testNow.Add(14*24*time.Hour)))
+	_, stderr, err = run(t, "sign", "--key", keyPath, "--in", in, "--out", out)
+	if err != nil {
+		t.Fatalf("a wide mode is a warning, not an error: %v", err)
+	}
+	if !strings.Contains(stderr, "warning") || !strings.Contains(stderr, "0644") {
+		t.Errorf("stderr = %q, want a mode warning", stderr)
+	}
+	if strings.Contains(stderr, "SECRET") {
+		t.Error("the warning must not leak anything")
+	}
+}
+
 func TestVerifyFailures(t *testing.T) {
 	dir := t.TempDir()
 	pub, keyPath := keygen(t, dir)
 	otherPub, _ := keygen(t, t.TempDir())
 	in := filepath.Join(dir, "targets.json")
 	signed := filepath.Join(dir, "signed.json")
-	write(t, in, unsignedList)
+	write(t, in, okList)
 	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", signed); err != nil {
 		t.Fatal(err)
 	}
 	good, _ := os.ReadFile(signed)
 
+	// Change one byte of the payload and keep the signature.
 	tampered := filepath.Join(dir, "tampered.json")
-	write(t, tampered, strings.Replace(string(good), "example.org", "evil.example", 1))
+	{
+		s := string(good)
+		i := strings.Index(s, `"payload":"`) + len(`"payload":"`)
+		b := []byte(s)
+		if b[i+10] == 'A' {
+			b[i+10] = 'B'
+		} else {
+			b[i+10] = 'A'
+		}
+		write(t, tampered, string(b))
+	}
 	garbage := filepath.Join(dir, "garbage.json")
 	write(t, garbage, "nope")
 
 	tests := []struct {
 		name string
+		now  time.Time
 		args []string
+		want string // part of the error, if checked
 	}{
-		{"wrong key", []string{"verify", "--pub", otherPub, "--in", signed}},
-		{"tampered payload", []string{"verify", "--pub", pub, "--in", tampered}},
-		{"garbage file", []string{"verify", "--pub", pub, "--in", garbage}},
-		{"missing file", []string{"verify", "--pub", pub, "--in", filepath.Join(dir, "none")}},
-		{"pub not base64", []string{"verify", "--pub", "!!!", "--in", signed}},
-		{"pub wrong size", []string{"verify", "--pub", base64.StdEncoding.EncodeToString([]byte("short")), "--in", signed}},
-		{"missing flag", []string{"verify", "--pub", pub}},
+		{"wrong key", testNow, []string{"verify", "--pub", otherPub, "--in", signed}, "bad signature"},
+		{"tampered payload", testNow, []string{"verify", "--pub", pub, "--in", tampered}, "bad signature"},
+		{"garbage file", testNow, []string{"verify", "--pub", pub, "--in", garbage}, ""},
+		{"missing file", testNow, []string{"verify", "--pub", pub, "--in", filepath.Join(dir, "none")}, ""},
+		{"expired list", testNow.Add(15 * 24 * time.Hour), []string{"verify", "--pub", pub, "--in", signed}, "expired"},
+		{"pub not base64", testNow, []string{"verify", "--pub", "!!!", "--in", signed}, ""},
+		{"pub wrong size", testNow, []string{"verify", "--pub", base64.StdEncoding.EncodeToString([]byte("short")), "--in", signed}, ""},
+		{"missing flag", testNow, []string{"verify", "--pub", pub}, ""},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			stdout, _, err := run(t, tc.args...)
+			stdout, _, err := runAt(t, tc.now, tc.args...)
 			if err == nil {
 				t.Fatal("want error")
+			}
+			if tc.want != "" && !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("err = %v, want it to mention %q", err, tc.want)
 			}
 			if strings.Contains(stdout, "OK") {
 				t.Errorf("printed OK on failure: %q", stdout)
@@ -191,58 +411,27 @@ func TestVerifyFailures(t *testing.T) {
 	}
 }
 
-func TestSignFailures(t *testing.T) {
-	dir := t.TempDir()
-	_, keyPath := keygen(t, dir)
-	in := filepath.Join(dir, "targets.json")
-	out := filepath.Join(dir, "signed.json")
-
-	badKey := filepath.Join(dir, "bad.key")
+func TestSignMissingInputsAndFlags(t *testing.T) {
+	_, keyPath, in, out := setup(t, okList)
+	badKey := filepath.Join(filepath.Dir(in), "bad.key")
 	write(t, badKey, "not a key\n")
 
-	tests := []struct {
-		name    string
-		key     string
-		content string
-	}{
-		{"short rationale", keyPath, strings.Replace(unsignedList, "Fictional target number one.", "short", 1)},
-		{"duplicate id", keyPath, strings.Replace(unsignedList, `"id": "b"`, `"id": "a"`, 1)},
-		{"host with scheme", keyPath, strings.Replace(unsignedList, "example.org", "https://example.org", 1)},
-		{"unknown category", keyPath, strings.Replace(unsignedList, `"infra"`, `"adult"`, 1)},
-		{"empty list", keyPath, `{"rev":"r","items":[]}`},
-		{"not json", keyPath, "nope"},
-		{"unknown field", keyPath, strings.Replace(unsignedList, `"rev": "2026-10-13.1",`, `"rev": "2026-10-13.1", "sig": "x",`, 1)},
-		{"bad key file", badKey, unsignedList},
-		{"missing key file", filepath.Join(dir, "none.key"), unsignedList},
+	tests := map[string][]string{
+		"bad key file":     {"sign", "--key", badKey, "--in", in, "--out", out},
+		"missing key file": {"sign", "--key", filepath.Join(filepath.Dir(in), "none.key"), "--in", in, "--out", out},
+		"missing input":    {"sign", "--key", keyPath, "--in", filepath.Join(filepath.Dir(in), "none.json"), "--out", out},
+		"missing flags":    {"sign", "--key", keyPath},
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			write(t, in, tc.content)
-			if _, _, err := run(t, "sign", "--key", tc.key, "--in", in, "--out", out); err == nil {
-				t.Fatal("want error")
+	for name, args := range tests {
+		t.Run(name, func(t *testing.T) {
+			if _, _, err := run(t, args...); err == nil {
+				t.Error("want error")
 			}
 			if _, err := os.Stat(out); err == nil {
 				t.Error("output file was created despite the error")
 			}
 		})
 	}
-
-	t.Run("missing input", func(t *testing.T) {
-		if _, _, err := run(t, "sign", "--key", keyPath, "--in", filepath.Join(dir, "none.json"), "--out", out); err == nil {
-			t.Error("want error")
-		}
-	})
-	t.Run("unwritable output", func(t *testing.T) {
-		write(t, in, unsignedList)
-		if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", filepath.Join(dir, "no-dir", "x.json")); err == nil {
-			t.Error("want error")
-		}
-	})
-	t.Run("missing flags", func(t *testing.T) {
-		if _, _, err := run(t, "sign", "--key", keyPath); err == nil {
-			t.Error("want error")
-		}
-	})
 }
 
 func TestKeyErrorDoesNotLeakContents(t *testing.T) {
@@ -252,5 +441,23 @@ func TestKeyErrorDoesNotLeakContents(t *testing.T) {
 	_, err := readPrivateKey(badKey)
 	if err == nil || strings.Contains(err.Error(), "SECRET-CONTENT") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+func TestDefaultClockIsUsed(t *testing.T) {
+	// The real clock: a list that expires in two weeks from the real now.
+	pub, keyPath, in, out := setup(t, list(time.Now().UTC().Format("2006-01-02")+".1", time.Now().Add(14*24*time.Hour)))
+	for _, args := range [][]string{
+		{"sign", "--key", keyPath, "--in", in, "--out", out},
+		{"verify", "--pub", pub, "--in", out},
+	} {
+		cmd := newRootCmd()
+		var buf bytes.Buffer
+		cmd.SetOut(&buf)
+		cmd.SetErr(&buf)
+		cmd.SetArgs(args)
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("%v: %v", args, err)
+		}
 	}
 }

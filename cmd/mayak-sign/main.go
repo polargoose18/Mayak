@@ -11,7 +11,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -22,14 +24,18 @@ import (
 // stored as the base64 of the 32-byte ed25519 seed.
 const keyFileName = "targets-signing.key"
 
-func newRootCmd() *cobra.Command {
+func newRootCmd() *cobra.Command { return newRootCmdAt(time.Now) }
+
+// newRootCmdAt builds the command with a clock, so that tests can fix the
+// time against which expires is checked.
+func newRootCmdAt(now func() time.Time) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "mayak-sign",
 		Short:         "Keys and signatures for the Mayak targets list (owner tool)",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(newKeygenCmd(), newSignCmd(), newVerifyCmd())
+	root.AddCommand(newKeygenCmd(), newSignCmd(now), newVerifyCmd(now))
 	return root
 }
 
@@ -80,17 +86,24 @@ func runKeygen(cmd *cobra.Command, outDir string) error {
 	return nil
 }
 
-func newSignCmd() *cobra.Command {
+func newSignCmd(now func() time.Time) *cobra.Command {
 	var keyPath, inPath, outPath string
 	cmd := &cobra.Command{
 		Use:   "sign --key <file> --in <targets.json> --out <targets.signed.json>",
 		Short: "Validate an unsigned targets list and sign it",
-		Args:  cobra.NoArgs,
+		Long: `Validate an unsigned targets list and sign its exact bytes.
+
+The list carries its own rev and expires. Signing is refused if expires is in
+the past or more than 30 days ahead, and if --out already holds a signed list
+whose rev is not older than the new one: revs only grow.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			priv, err := readPrivateKey(keyPath)
 			if err != nil {
 				return err
 			}
+			warnKeyMode(cmd, keyPath)
+
 			in, err := os.ReadFile(inPath)
 			if err != nil {
 				return fmt.Errorf("read %s: %w", inPath, err)
@@ -99,14 +112,19 @@ func newSignCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("%s: %w", inPath, err)
 			}
-			signed, err := targets.Sign(priv, *list)
+			if err := checkExisting(outPath, list.Rev); err != nil {
+				return err
+			}
+
+			signed, err := targets.Sign(priv, in, now())
 			if err != nil {
 				return err
 			}
 			if err := os.WriteFile(outPath, append(signed, '\n'), 0o644); err != nil {
 				return fmt.Errorf("write %s: %w", outPath, err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "signed rev %s, %d targets -> %s\n", list.Rev, len(list.Items), outPath)
+			fmt.Fprintf(cmd.OutOrStdout(), "signed rev %s, %d targets, expires %s -> %s\n",
+				list.Rev, len(list.Items), list.Expires.UTC().Format(time.RFC3339), outPath)
 			return nil
 		},
 	}
@@ -119,7 +137,43 @@ func newSignCmd() *cobra.Command {
 	return cmd
 }
 
-func newVerifyCmd() *cobra.Command {
+// checkExisting makes sure that signing into out does not roll back a signed
+// list that is already there. The old list is read without checking its
+// signature: it is the owner's own file, and after a key change it is signed
+// by the old key.
+func checkExisting(out, newRev string) error {
+	old, err := os.ReadFile(out)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read %s: %w", out, err)
+	}
+	stored, err := targets.StoredRev(old)
+	if err != nil {
+		return fmt.Errorf("%s exists and is not a signed targets list, refusing to overwrite it", out)
+	}
+	if err := targets.CheckRev(stored, newRev); err != nil {
+		return fmt.Errorf("%s: %w", out, err)
+	}
+	if c, _ := targets.CompareRev(newRev, stored); c == 0 {
+		return fmt.Errorf("%s already holds rev %s: raise the rev of the new list", out, stored)
+	}
+	return nil
+}
+
+// warnKeyMode warns if other users can read the key file.
+func warnKeyMode(cmd *cobra.Command, path string) {
+	info, err := os.Stat(path)
+	if err != nil || runtime.GOOS == "windows" {
+		return
+	}
+	if mode := info.Mode().Perm(); mode&0o077 != 0 {
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s is accessible by other users (mode %04o); run chmod 600 on it\n", path, mode)
+	}
+}
+
+func newVerifyCmd(now func() time.Time) *cobra.Command {
 	var pubB64, inPath string
 	cmd := &cobra.Command{
 		Use:   "verify --pub <base64> --in <file>",
@@ -134,11 +188,12 @@ func newVerifyCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("read %s: %w", inPath, err)
 			}
-			list, err := targets.Verify(ed25519.PublicKey(raw), data)
+			list, err := targets.Verify([]ed25519.PublicKey{raw}, data, now())
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "OK: rev %s, %d targets\n", list.Rev, len(list.Items))
+			fmt.Fprintf(cmd.OutOrStdout(), "OK: rev %s, %d targets, expires %s\n",
+				list.Rev, len(list.Items), list.Expires.UTC().Format(time.RFC3339))
 			return nil
 		},
 	}

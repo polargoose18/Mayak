@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"net/http"
-	"net/netip"
 	"sync"
 	"time"
 
@@ -24,9 +23,9 @@ type CtrlRequest struct {
 	// answers.
 	Allowlist []string
 
-	// TargetAddr is the trusted IP of the target, for the control node's
-	// own check of it.
-	TargetAddr netip.AddrPort
+	// Host is the target's host name, for the control node's own check of it.
+	// The node finds the addresses itself.
+	Host string
 
 	roots *x509.CertPool // test override for the trusted CAs
 }
@@ -68,8 +67,8 @@ func Ctrl(ctx context.Context, req CtrlRequest) (CtrlObservation, error) {
 		return CtrlObservation{}, errors.New("ctrl: no control node URL")
 	case len(req.Anchors) == 0:
 		return CtrlObservation{}, errors.New("ctrl: no anchor sites")
-	case !req.TargetAddr.IsValid() || req.TargetAddr.Port() == 0:
-		return CtrlObservation{}, errors.New("ctrl: invalid target address")
+	case req.Host == "":
+		return CtrlObservation{}, errors.New("ctrl: no target host")
 	}
 	runCtx, cancel := context.WithTimeout(ctx, testTimeout)
 	defer cancel()
@@ -95,7 +94,7 @@ func Ctrl(ctx context.Context, req CtrlRequest) (CtrlObservation, error) {
 	wg.Wait()
 
 	if obs.ControlAlive {
-		if ext, err := req.Control.Reach(runCtx, req.TargetAddr); err == nil {
+		if ext, err := req.Control.Reach(runCtx, req.Host); err == nil {
 			obs.TargetExternal = ext
 		}
 	}

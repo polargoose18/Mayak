@@ -174,7 +174,7 @@ func (p pipeline) run(t *testing.T) classify.Observation {
 	}
 	// Without a reference (the node could not fetch the page either) the
 	// classifier works with what it has.
-	ref, _ := ControlClient{BaseURL: ctrl.srv.URL}.Reference(c, host, "/page", target)
+	ref, _ := ControlClient{BaseURL: ctrl.srv.URL}.Reference(c, host, "/page")
 	o.HTTP = h.ForClassifier(ref)
 
 	ctrlCtx := c
@@ -188,11 +188,11 @@ func (p pipeline) run(t *testing.T) classify.Observation {
 		allow = p.allowlist(env)
 	}
 	cr, err := Ctrl(ctrlCtx, CtrlRequest{
-		Control:    ControlClient{BaseURL: p.controlURL(env, ctrl), roots: env.CertPool},
-		Anchors:    []string{p.anchor(env)},
-		Allowlist:  allow,
-		TargetAddr: target,
-		roots:      env.CertPool,
+		Control:   ControlClient{BaseURL: p.controlURL(env, ctrl), roots: env.CertPool},
+		Anchors:   []string{p.anchor(env)},
+		Allowlist: allow,
+		Host:      host,
+		roots:     env.CertPool,
 	})
 	if err != nil {
 		t.Fatal(err)

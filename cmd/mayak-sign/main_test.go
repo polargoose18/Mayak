@@ -461,3 +461,122 @@ func TestDefaultClockIsUsed(t *testing.T) {
 		}
 	}
 }
+
+func TestPubkeyPrintsWhatKeygenPrinted(t *testing.T) {
+	dir := t.TempDir()
+	stdout, _, err := run(t, "keygen", "--out", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPath := filepath.Join(dir, keyFileName)
+
+	got, stderr, err := run(t, "pubkey", "--key", keyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != stdout {
+		t.Errorf("pubkey printed %q, keygen printed %q", got, stdout)
+	}
+	if strings.Count(got, "\n") != 1 || !strings.HasSuffix(got, "\n") {
+		t.Errorf("want exactly one line, got %q", got)
+	}
+	if raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(got)); err != nil || len(raw) != ed25519.PublicKeySize {
+		t.Errorf("output is not a base64 32-byte key: %q", got)
+	}
+	if stderr != "" {
+		t.Errorf("a 0600 key file must give no stderr, got %q", stderr)
+	}
+
+	// Nothing of the private key is printed: not the seed, not the file.
+	secret, _ := os.ReadFile(keyPath)
+	seed := strings.TrimSpace(string(secret))
+	if strings.Contains(got, seed) || strings.Contains(stderr, seed) {
+		t.Error("the private key was printed")
+	}
+}
+
+func TestPubkeyIsTheKeyThatVerifies(t *testing.T) {
+	pub, keyPath, in, out := setup(t, okList)
+	if _, _, err := run(t, "sign", "--key", keyPath, "--in", in, "--out", out); err != nil {
+		t.Fatal(err)
+	}
+	fromFile, _, err := run(t, "pubkey", "--key", keyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(fromFile) != pub {
+		t.Fatalf("pubkey = %q, keygen = %q", fromFile, pub)
+	}
+	stdout, _, err := run(t, "verify", "--pub", strings.TrimSpace(fromFile), "--in", out)
+	if err != nil || !strings.Contains(stdout, "OK") {
+		t.Errorf("verify with the pubkey output: %q, %v", stdout, err)
+	}
+}
+
+func TestPubkeyErrorsDoNotLeakTheFile(t *testing.T) {
+	dir := t.TempDir()
+	validSeed := base64.StdEncoding.EncodeToString(make([]byte, 31)) // a seed one byte short
+	files := map[string]string{
+		"garbage":        "SECRET-CONTENT\n",
+		"wrong size":     validSeed + "\n",
+		"empty":          "",
+		"binary":         "\x00\x01SECRET-CONTENT\xff",
+		"two lines":      "SECRET-CONTENT\nSECRET-CONTENT\n",
+		"base64 garbage": "SECRET-CONTENT==\n",
+	}
+	for name, content := range files {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(dir, name+".key")
+			write(t, path, content)
+			stdout, stderr, err := run(t, "pubkey", "--key", path)
+			if err == nil {
+				t.Fatal("want error")
+			}
+			for what, text := range map[string]string{"error": err.Error(), "stdout": stdout, "stderr": stderr} {
+				if strings.Contains(text, "SECRET-CONTENT") || (validSeed != "" && strings.Contains(text, validSeed)) {
+					t.Errorf("%s leaks the file: %q", what, text)
+				}
+			}
+			if stdout != "" {
+				t.Errorf("printed %q on failure", stdout)
+			}
+		})
+	}
+
+	t.Run("missing file", func(t *testing.T) {
+		stdout, _, err := run(t, "pubkey", "--key", filepath.Join(dir, "none.key"))
+		if err == nil || stdout != "" {
+			t.Errorf("err = %v, stdout = %q", err, stdout)
+		}
+	})
+	t.Run("missing flag", func(t *testing.T) {
+		if _, _, err := run(t, "pubkey"); err == nil {
+			t.Error("want error")
+		}
+	})
+	t.Run("key path is a directory", func(t *testing.T) {
+		if _, _, err := run(t, "pubkey", "--key", dir); err == nil {
+			t.Error("want error")
+		}
+	})
+}
+
+func TestPubkeyWarnsAboutKeyMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not meaningful on Windows")
+	}
+	pub, keyPath := keygen(t, t.TempDir())
+	if err := os.Chmod(keyPath, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, err := run(t, "pubkey", "--key", keyPath)
+	if err != nil {
+		t.Fatalf("a wide mode is a warning, not an error: %v", err)
+	}
+	if strings.TrimSpace(stdout) != pub {
+		t.Errorf("stdout = %q, want the public key and nothing else", stdout)
+	}
+	if !strings.Contains(stderr, "warning") || !strings.Contains(stderr, "0644") {
+		t.Errorf("stderr = %q, want a mode warning", stderr)
+	}
+}

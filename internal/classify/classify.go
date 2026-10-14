@@ -14,8 +14,15 @@
 //     sites up the verdict is allowlist_mode, otherwise inconclusive. First,
 //     because every other comparison needs the control node.
 //  2. DNS (rule 2). A tampered answer comes before everything else because
-//     the later tests are only meaningful against the trusted IP. If there is
-//     no trusted answer at all there is no IP to test: inconclusive.
+//     the later tests are only meaningful against the trusted IP. Only proven
+//     tampering counts: a bogon address, NXDOMAIN while trusted resolvers
+//     answer, or an address that does not overlap the trusted ones and fails
+//     the TLS check (bad certificate for the name). The same kind of address
+//     with a valid certificate is genuine, which is what a CDN looks like, and
+//     the run goes on. If that check was not made or could not complete, the
+//     verdict is inconclusive, because a reset there may be SNI blocking
+//     rather than DNS tampering. If there is no trusted answer at all there
+//     is no IP to test: inconclusive.
 //  3. TCP (rule 3). Timeout or RST on connect is ip_block, unless the control
 //     node cannot reach the target either: then vendor_down (section 19).
 //  4. TLS (rules 4 and 5). An invalid certificate is tls_intercept. A failed
@@ -46,9 +53,11 @@
 //
 // # Known limits
 //
-// DNS tamper detection compares addresses, so a CDN that gives different
-// resolvers disjoint address sets can look like a tamper. Missing
-// observations make the verdict inconclusive, never ok.
+// A system answer that differs from the trusted ones is never called a
+// tamper on the difference alone (CDNs give resolvers different addresses);
+// it needs the TLS check, so the caller must make it (see DNS.SystemAddrCheck)
+// whenever the answers do not overlap. Missing observations make the verdict
+// inconclusive, never ok.
 //
 // freeze_after_n and throttled have no rules yet.
 package classify
@@ -69,7 +78,7 @@ func Classify(o Observation) report.Verdict {
 	switch dns {
 	case dnsTampered:
 		return report.VerdictDNSTamper
-	case dnsNoTrustedAnswer:
+	case dnsNoTrustedAnswer, dnsUnverified:
 		return report.VerdictInconclusive
 	}
 
@@ -102,15 +111,16 @@ const (
 	dnsConsistent dnsState = iota
 	dnsTampered
 	dnsNoTrustedAnswer
+	dnsUnverified
 	dnsSystemFailed
 )
 
 // analyzeDNS implements rule 2. The trusted set is every address returned by
 // the control node and the public resolvers. The system answer is tampered
-// with if it holds a bogon that is not in the trusted set, is NXDOMAIN while
-// trusted resolvers have addresses, or shares no address with the trusted set.
-// "Shares no address" rather than "has an extra address" is deliberately
-// conservative: it avoids flagging CDNs that return partly different sets.
+// with if it holds a bogon that is not in the trusted set, or is NXDOMAIN
+// while trusted resolvers have addresses. If it merely shares no address with
+// the trusted set (normal for a CDN), only the TLS check of one of its
+// addresses decides.
 func analyzeDNS(d DNS) dnsState {
 	trusted := make(map[netip.Addr]bool)
 	for _, a := range append([]DNSAnswer{d.Control}, d.Public...) {
@@ -141,7 +151,13 @@ func analyzeDNS(d DNS) dnsState {
 		return dnsSystemFailed
 	case DNSOK:
 		if len(sys.Addrs) > 0 && !anyIn(sys.Addrs, trusted) {
-			return dnsTampered
+			switch d.SystemAddrCheck {
+			case AddrCheckValidCert:
+				return dnsConsistent
+			case AddrCheckBadCert:
+				return dnsTampered
+			}
+			return dnsUnverified
 		}
 	}
 	return dnsConsistent

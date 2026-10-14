@@ -257,3 +257,72 @@ func TestDNSCancelledContext(t *testing.T) {
 		t.Errorf("err = %v, want context.Canceled", err)
 	}
 }
+
+func TestDNSAddrCheck(t *testing.T) {
+	env := mockdpi.Start(t, mockdpi.Config{
+		ResetAfterHello: &mockdpi.ResetAfterHelloConfig{BlockedSNI: []string{"blocked.example"}},
+		Blackhole:       true,
+		Control:         true,
+		ClosedPort:      true,
+		StubPage:        true,
+		CertNames:       []string{dnsHost, "blocked.example"},
+	})
+	tests := []struct {
+		name    string
+		target  string
+		host    string
+		timeout time.Duration
+		want    classify.AddrCheck
+	}{
+		{"valid certificate for the name", env.ControlTLS, dnsHost, generous, classify.AddrCheckValidCert},
+		{"certificate is for another name", env.ControlTLS, "intercepted.example", generous, classify.AddrCheckBadCert},
+		{"reset after the hello", env.ResetAfterHello, "blocked.example", generous, classify.AddrCheckUnreachable},
+		{"silent server", env.Blackhole, dnsHost, short, classify.AddrCheckUnreachable},
+		{"nothing listens", env.ClosedPort, dnsHost, generous, classify.AddrCheckUnreachable},
+		{"not a TLS server", env.StubPage, dnsHost, generous, classify.AddrCheckUnreachable},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
+			defer cancel()
+			got, err := dnsAddrCheck(ctx, addr(t, tc.target), tc.host, env.CertPool)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Errorf("check = %q, want %q", got, tc.want)
+			}
+		})
+	}
+
+	// The exported function uses the system roots, which do not know the mock CA.
+	ctx, cancel := context.WithTimeout(context.Background(), generous)
+	defer cancel()
+	if got, err := DNSAddrCheck(ctx, addr(t, env.ControlTLS), dnsHost); err != nil || got != classify.AddrCheckBadCert {
+		t.Errorf("DNSAddrCheck without the mock CA = %q, %v; want bad_cert", got, err)
+	}
+}
+
+func TestDNSAddrCheckValidationAndCancel(t *testing.T) {
+	good := netip.MustParseAddrPort("127.0.0.1:443")
+	for name, f := range map[string]func() (classify.AddrCheck, error){
+		"zero address": func() (classify.AddrCheck, error) {
+			return DNSAddrCheck(context.Background(), netip.AddrPort{}, dnsHost)
+		},
+		"no port": func() (classify.AddrCheck, error) {
+			return DNSAddrCheck(context.Background(), netip.AddrPortFrom(good.Addr(), 0), dnsHost)
+		},
+		"empty host": func() (classify.AddrCheck, error) { return DNSAddrCheck(context.Background(), good, "") },
+	} {
+		if got, err := f(); err == nil || got != "" {
+			t.Errorf("%s: got %q, %v; want an error", name, got, err)
+		}
+	}
+
+	env := mockdpi.Start(t, mockdpi.Config{Control: true})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := DNSAddrCheck(ctx, addr(t, env.ControlTLS), dnsHost); !errors.Is(err, context.Canceled) {
+		t.Errorf("err = %v, want context.Canceled", err)
+	}
+}

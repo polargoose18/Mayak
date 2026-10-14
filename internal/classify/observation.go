@@ -38,7 +38,24 @@ type DNS struct {
 	System  DNSAnswer   // the system resolver
 	Control DNSAnswer   // the control node's resolver
 	Public  []DNSAnswer // public DoH/DoT resolvers
+
+	// SystemAddrCheck is the result of a TLS handshake with the target's name
+	// to an address from the system answer. It is only read when that answer
+	// does not overlap the trusted ones and has no bogon; the empty value
+	// means the check was not made.
+	SystemAddrCheck AddrCheck
 }
+
+// AddrCheck is the outcome of checking an address from the system resolver by
+// a TLS handshake with the target's name.
+type AddrCheck string
+
+// Address check outcomes.
+const (
+	AddrCheckValidCert   AddrCheck = "valid_cert"  // the certificate is valid for the name: the address is genuine
+	AddrCheckBadCert     AddrCheck = "bad_cert"    // a certificate that is not valid for the name
+	AddrCheckUnreachable AddrCheck = "unreachable" // no handshake (reset, timeout, ...): nothing is proven
+)
 
 // DNSAnswer is one resolver's answer.
 type DNSAnswer struct {

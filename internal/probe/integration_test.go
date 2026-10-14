@@ -105,7 +105,11 @@ type pipeline struct {
 	controlURL func(e *mockdpi.Env, f *fakeControl) string
 	reachable  bool // what the control node says about the target
 	ctrlShort  bool // the control node is silent, so use a short deadline
-	allowlist  func(e *mockdpi.Env) []string
+
+	// addrCheck, if set, is the server that answers the TLS check of the
+	// address in the system answer.
+	addrCheck func(e *mockdpi.Env) string
+	allowlist func(e *mockdpi.Env) []string
 }
 
 func (p pipeline) run(t *testing.T) classify.Observation {
@@ -141,6 +145,13 @@ func (p pipeline) run(t *testing.T) classify.Observation {
 		t.Fatal(err)
 	}
 	o.DNS = d.ForClassifier()
+	if p.addrCheck != nil {
+		check, err := dnsAddrCheck(c, addr(t, p.addrCheck(env)), host, env.CertPool)
+		if err != nil {
+			t.Fatal(err)
+		}
+		o.DNS.SystemAddrCheck = check
+	}
 
 	tcp, err := TCP(c, TCPRequest{Addr: target})
 	if err != nil {
@@ -237,6 +248,27 @@ func TestPipelineVerdicts(t *testing.T) {
 			p.config.DNSSpoof = &mockdpi.DNSSpoofConfig{Names: []string{dnsHost}}
 			p.systemDNS = func(e *mockdpi.Env) string { return e.DNSSpoof }
 		}), report.VerdictDNSTamper},
+		{"CDN: the system resolver gives another genuine address", with(func(p *pipeline) {
+			p.config.DNSSpoof = &mockdpi.DNSSpoofConfig{Names: []string{dnsHost}, BogonIP: netip.MustParseAddr("203.0.113.7")}
+			p.systemDNS = func(e *mockdpi.Env) string { return e.DNSSpoof }
+			p.addrCheck = controlTLS
+		}), report.VerdictOK},
+		{"the other address presents a certificate for another name", with(func(p *pipeline) {
+			p.host = "intercepted.example"
+			p.config.DNSSpoof = &mockdpi.DNSSpoofConfig{Names: []string{"intercepted.example"}, BogonIP: netip.MustParseAddr("203.0.113.7")}
+			p.systemDNS = func(e *mockdpi.Env) string { return e.DNSSpoof }
+			p.addrCheck = controlTLS
+		}), report.VerdictDNSTamper},
+		{"the other address cannot be checked", with(func(p *pipeline) {
+			p.config.ClosedPort = true
+			p.config.DNSSpoof = &mockdpi.DNSSpoofConfig{Names: []string{dnsHost}, BogonIP: netip.MustParseAddr("203.0.113.7")}
+			p.systemDNS = func(e *mockdpi.Env) string { return e.DNSSpoof }
+			p.addrCheck = func(e *mockdpi.Env) string { return e.ClosedPort }
+		}), report.VerdictInconclusive},
+		{"the other address is not checked at all", with(func(p *pipeline) {
+			p.config.DNSSpoof = &mockdpi.DNSSpoofConfig{Names: []string{dnsHost}, BogonIP: netip.MustParseAddr("203.0.113.7")}
+			p.systemDNS = func(e *mockdpi.Env) string { return e.DNSSpoof }
+		}), report.VerdictInconclusive},
 		{"RST in answer to SYN, target up outside", with(func(p *pipeline) {
 			p.config.ClosedPort = true
 			p.target = func(e *mockdpi.Env) string { return e.ClosedPort }

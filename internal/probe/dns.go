@@ -176,3 +176,37 @@ func queryServer(ctx context.Context, srv DNSServer, host string, roots *x509.Ce
 	res.Ms = elapsed()
 	return res
 }
+
+// DNSAddrCheck checks one address from the system resolver's answer: it makes
+// a TLS 1.3 handshake to addr with the target's name as SNI and verifies the
+// certificate against that name. A certificate valid for the name means the
+// address is genuine (a CDN node the trusted resolvers did not list); a
+// certificate that is not means a stand-in server; no handshake (reset,
+// timeout, refused) proves nothing. It runs under the 8 second deadline of a
+// test. The error is for a bad request or a cancelled context.
+func DNSAddrCheck(ctx context.Context, addr netip.AddrPort, host string) (classify.AddrCheck, error) {
+	return dnsAddrCheck(ctx, addr, host, nil)
+}
+
+func dnsAddrCheck(ctx context.Context, addr netip.AddrPort, host string, roots *x509.CertPool) (classify.AddrCheck, error) {
+	if !addr.IsValid() || addr.Port() == 0 {
+		return "", errors.New("dns addr check: invalid address")
+	}
+	if host == "" {
+		return "", errors.New("dns addr check: empty host")
+	}
+	runCtx, cancel := context.WithTimeout(ctx, testTimeout)
+	defer cancel()
+
+	h := handshake(runCtx, addr, host, roots)
+	if err := cancelled("dns addr check", ctx); err != nil {
+		return "", err
+	}
+	switch h.Outcome {
+	case TLSOutcomeOK:
+		return classify.AddrCheckValidCert, nil
+	case TLSOutcomeCertInvalid:
+		return classify.AddrCheckBadCert, nil
+	}
+	return classify.AddrCheckUnreachable, nil
+}

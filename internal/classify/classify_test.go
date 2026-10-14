@@ -76,6 +76,18 @@ func TestClassify(t *testing.T) {
 		{"IPv4-mapped system answer equals trusted one", func(o *Observation) {
 			o.DNS.System = answer("::ffff:203.0.113.10")
 		}, report.VerdictOK},
+		{"CDN: disjoint non-bogon answer, certificate is valid", func(o *Observation) {
+			o.DNS.System = answer("198.51.100.7")
+			o.DNS.SystemAddrCheck = AddrCheckValidCert
+		}, report.VerdictOK},
+		{"CDN: several addresses, none trusted, certificate is valid", func(o *Observation) {
+			o.DNS.System = answer("198.51.100.7", "198.51.100.8")
+			o.DNS.SystemAddrCheck = AddrCheckValidCert
+		}, report.VerdictOK},
+		{"overlapping answer needs no check, and a bad check result is ignored", func(o *Observation) {
+			o.DNS.System = answer("203.0.113.10", "198.51.100.7")
+			o.DNS.SystemAddrCheck = AddrCheckBadCert
+		}, report.VerdictOK},
 		{"system resolver shares one address with trusted (CDN)", func(o *Observation) {
 			o.DNS.System = answer("203.0.113.10", "203.0.113.99")
 		}, report.VerdictOK},
@@ -93,8 +105,13 @@ func TestClassify(t *testing.T) {
 		{"system answer is private", func(o *Observation) { o.DNS.System = answer("10.0.0.1") }, report.VerdictDNSTamper},
 		{"system answer is loopback", func(o *Observation) { o.DNS.System = answer("127.0.0.1") }, report.VerdictDNSTamper},
 		{"system answer is CGNAT", func(o *Observation) { o.DNS.System = answer("100.64.1.1") }, report.VerdictDNSTamper},
-		{"system answer is disjoint from trusted", func(o *Observation) {
+		{"disjoint non-bogon answer, certificate is bad", func(o *Observation) {
 			o.DNS.System = answer("198.51.100.7")
+			o.DNS.SystemAddrCheck = AddrCheckBadCert
+		}, report.VerdictDNSTamper},
+		{"bogon is tampering even if the check says the certificate is fine", func(o *Observation) {
+			o.DNS.System = answer("10.0.0.1")
+			o.DNS.SystemAddrCheck = AddrCheckValidCert
 		}, report.VerdictDNSTamper},
 		{"system NXDOMAIN, others answer", func(o *Observation) {
 			o.DNS.System = DNSAnswer{Status: DNSNXDomain}
@@ -242,6 +259,17 @@ func TestClassify(t *testing.T) {
 		{"reset after hello, neutral SNI also fails", func(o *Observation) {
 			o.TLS = TLS{TargetSNI: HandshakeResetAfterHello, NeutralSNI: HandshakeResetAfterHello}
 		}, report.VerdictInconclusive},
+		{"disjoint non-bogon answer, check not made", func(o *Observation) {
+			o.DNS.System = answer("198.51.100.7")
+		}, report.VerdictInconclusive},
+		{"disjoint non-bogon answer, check could not connect", func(o *Observation) {
+			o.DNS.System = answer("198.51.100.7")
+			o.DNS.SystemAddrCheck = AddrCheckUnreachable
+		}, report.VerdictInconclusive},
+		{"disjoint non-bogon answer, unknown check value", func(o *Observation) {
+			o.DNS.System = answer("198.51.100.7")
+			o.DNS.SystemAddrCheck = "weird"
+		}, report.VerdictInconclusive},
 		{"no trusted DNS answer", func(o *Observation) {
 			o.DNS.Control, o.DNS.Public = DNSAnswer{Status: DNSFailure}, []DNSAnswer{{Status: DNSNXDomain}}
 		}, report.VerdictInconclusive},
@@ -327,6 +355,10 @@ func TestClassifyAlwaysReturnsKnownVerdict(t *testing.T) {
 	dnss := []DNS{
 		{},
 		healthy().DNS,
+		{System: answer("198.51.100.7"), Control: answer("203.0.113.10")},
+		{System: answer("198.51.100.7"), Control: answer("203.0.113.10"), SystemAddrCheck: AddrCheckValidCert},
+		{System: answer("198.51.100.7"), Control: answer("203.0.113.10"), SystemAddrCheck: AddrCheckBadCert},
+		{System: answer("198.51.100.7"), Control: answer("203.0.113.10"), SystemAddrCheck: AddrCheckUnreachable},
 		{System: answer("10.0.0.1"), Control: answer("203.0.113.10")},
 		{System: DNSAnswer{Status: DNSNXDomain}, Control: answer("203.0.113.10")},
 		{System: DNSAnswer{Status: DNSFailure}, Control: answer("203.0.113.10")},

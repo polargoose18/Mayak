@@ -1,0 +1,26 @@
+# Binaries
+/mayak
+/mayakd
+/mayak-ctrl
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+
+# Coverage and profiles
+coverage.*
+*.prof
+
+# Go workspace
+go.work
+go.work.sum
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+
+# Private keys (see docs/KEYS.md): never commit them
+*.key
+keys/

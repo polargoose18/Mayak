@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "rev": "2026-10-13.1",
+  "expires": "2026-11-12T00:00:00Z",
+  "items": [
+    {"id": "example-org", "host": "example.org", "category": "infra", "rationale": "Fictional example target for the file format.", "rev": "2026-10-13.1"},
+    {"id": "example-net", "host": "example.net", "category": "dev", "rationale": "Fictional example target for the file format.", "rev": "2026-10-13.1"},
+    {"id": "example-com", "host": "example.com", "category": "ai", "rationale": "Fictional example target for the file format.", "rev": "2026-10-13.1"}
+  ]
+}

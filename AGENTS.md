@@ -8,7 +8,7 @@
 
 Источники правды, читать в таком порядке:
 
-1. `docs/SPEC.md` — ТЗ (разделы 1–20; при расхождении приоритет у большего номера раздела).
+1. `docs/SPEC.md` — ТЗ (разделы 1–21; при расхождении приоритет у большего номера раздела).
 2. `docs/adr/` — принятые решения: ADR-000 (свой движок), ADR-004 (модель угроз), ADR-005 (схема отправки).
 3. Этот файл.
 
@@ -28,12 +28,14 @@
 cmd/mayak/          агент (CLI)
 cmd/mayakd/         сервер (приём, API, агрегатор)
 cmd/mayak-ctrl/     контрольный узел
+cmd/mayak-sign/     инструмент владельца: ключи и подпись списка целей (docs/KEYS.md)
 internal/probe/     dns, tcp, tlssni, http, quic
 internal/classify/  правила вердиктов
 internal/report/    схема отчёта, валидация
+internal/targets/   подписанный список целей: формат, подпись, проверка, хранение rev
 internal/agg/       окна, оценка, детектор
 internal/store/     миграции и запросы
-targets/            targets.json и обоснования
+targets/            targets.json (список без подписи), targets.signed.json, обоснования
 schema/             JSON Schema отчёта
 testbed/mockdpi/    мок-цензор для тестов
 deploy/             docker compose, Caddyfile
@@ -51,6 +53,7 @@ docs/               SPEC.md, adr/
 
 **Безопасность и нагрузка.**
 - Агент проверяет только цели из подписанного списка `targets.json`. Произвольные цели из аргументов не принимаются.
+- Контрольному узлу клиент передаёт только `host` (и `path` для `/v1/fetch`), никогда `ip` или `port`. `path` только `/` или `/robots.txt` (`ControlClient.Reference` отказывает остальным до запроса). Протокол: SPEC §21.1.
 - Потолки из раздела 5 ТЗ: не более 4 одновременных проверок, пауза 200–800 мс между ними, таймаут 8 секунд на тест.
 - Агент по умолчанию ничего не отправляет. Отправка только после явного согласия (`mayak consent grant`) и показа точного JSON.
 
@@ -79,6 +82,8 @@ make test    # go test ./...
 make vet     # go vet ./...
 make fmt     # gofmt -l . (список неотформатированных файлов, должен быть пуст)
 make check   # fmt + vet + test
+make sign-check     # targets/targets.signed.json (если есть) подписан вшитым ключом и соответствует формату
+make release-check  # падает, пока в internal/targets/pubkeys.go есть ключ с меткой // TESTKEY
 ```
 
 ## Стиль кода

@@ -1,0 +1,31 @@
+{
+  "v": 1,
+  "rev": "2026-10-14.1",
+  "expires": "2026-11-11T00:00:00Z",
+  "items": [
+    {"id": "chatgpt", "host": "chatgpt.com", "category": "ai", "rationale": "Most widely used AI chat assistant; web app on its own domain.", "rev": "2026-10-14.1"},
+    {"id": "claude-ai", "host": "claude.ai", "category": "ai", "rationale": "Major AI assistant web app; separate domain from its API.", "rev": "2026-10-14.1"},
+    {"id": "gemini", "host": "gemini.google.com", "category": "ai", "rationale": "Google AI assistant on a subdomain: checks per-subdomain filtering of a Google service.", "rev": "2026-10-14.1"},
+    {"id": "huggingface", "host": "huggingface.co", "category": "ai", "rationale": "Main hub for open models and datasets; used by developers daily.", "rev": "2026-10-14.1"},
+    {"id": "youtube", "host": "www.youtube.com", "category": "video", "rationale": "Largest video platform; also serves QUIC, so it checks UDP and QUIC handling.", "rev": "2026-10-14.1"},
+    {"id": "twitch", "host": "www.twitch.tv", "category": "video", "rationale": "Large live streaming service; mass audience, separate infrastructure from YouTube.", "rev": "2026-10-14.1"},
+    {"id": "telegram-web", "host": "web.telegram.org", "category": "messenger", "rationale": "Web client of a messenger with a mass audience; tests the service endpoint, not only the site.", "rev": "2026-10-14.1"},
+    {"id": "whatsapp-web", "host": "web.whatsapp.com", "category": "messenger", "rationale": "Web client of one of the most used messengers worldwide.", "rev": "2026-10-14.1"},
+    {"id": "signal", "host": "signal.org", "category": "messenger", "rationale": "Site of a widely used private messenger; small and independent hosting.", "rev": "2026-10-14.1"},
+    {"id": "discord", "host": "discord.com", "category": "messenger", "rationale": "Voice and text chat with a large audience, including gaming communities.", "rev": "2026-10-14.1"},
+    {"id": "github", "host": "github.com", "category": "dev", "rationale": "Main code hosting platform; many tools and builds depend on it.", "rev": "2026-10-14.1"},
+    {"id": "github-raw", "host": "raw.githubusercontent.com", "category": "dev", "rationale": "Serves raw files and scripts from GitHub; often filtered separately from github.com.", "rev": "2026-10-14.1"},
+    {"id": "gitlab", "host": "gitlab.com", "category": "dev", "rationale": "Second large code hosting platform; independent from GitHub.", "rev": "2026-10-14.1"},
+    {"id": "docker-registry", "host": "registry-1.docker.io", "category": "dev", "rationale": "Docker Hub image registry endpoint; container pulls and deployments depend on it.", "rev": "2026-10-14.1"},
+    {"id": "pypi", "host": "pypi.org", "category": "dev", "rationale": "Python package index; installs of Python packages depend on it.", "rev": "2026-10-14.1"},
+    {"id": "npm-registry", "host": "registry.npmjs.org", "category": "dev", "rationale": "npm package registry endpoint; JavaScript builds depend on it.", "rev": "2026-10-14.1"},
+    {"id": "go-proxy", "host": "proxy.golang.org", "category": "dev", "rationale": "Default Go module proxy; Go builds depend on it.", "rev": "2026-10-14.1"},
+    {"id": "instagram", "host": "www.instagram.com", "category": "social", "rationale": "Large social network with a mass audience.", "rev": "2026-10-14.1"},
+    {"id": "facebook", "host": "www.facebook.com", "category": "social", "rationale": "Large social network; shares infrastructure with other services of the same company.", "rev": "2026-10-14.1"},
+    {"id": "x", "host": "x.com", "category": "social", "rationale": "Large social network and news service.", "rev": "2026-10-14.1"},
+    {"id": "reddit", "host": "www.reddit.com", "category": "social", "rationale": "Large forum platform; widely used for technical discussion.", "rev": "2026-10-14.1"},
+    {"id": "cloudflare", "host": "www.cloudflare.com", "category": "infra", "rationale": "Large CDN provider; shows how traffic to Cloudflare addresses is treated.", "rev": "2026-10-14.1"},
+    {"id": "google", "host": "www.google.com", "category": "infra", "rationale": "Most visited search engine; a baseline for Google address ranges.", "rev": "2026-10-14.1"},
+    {"id": "wikipedia", "host": "en.wikipedia.org", "category": "infra", "rationale": "Public encyclopedia with a mass audience; static and stable site.", "rev": "2026-10-14.1"}
+  ]
+}

@@ -14,7 +14,7 @@ func PublicKeys() []ed25519.PublicKey {
 	// не сохранена, поэтому подписать список им нельзя. Метка TESTKEY ниже
 	// нужна цели `make release-check`: пока она есть в файле, релиз невозможен.
 	encoded := []string{
-		"RHWyg49gLrR1LzXlx87zsuGZs6/66I0W+rB0PEPH/5U=", // TESTKEY
+		"n8O6Ai33OUIh9meb91UtYW5YBmQQuUZA3FQkwBzvMvQ=", 
 	}
 
 	keys := make([]ed25519.PublicKey, 0, len(encoded))

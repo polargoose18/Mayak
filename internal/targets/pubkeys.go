@@ -17,7 +17,7 @@ func PublicKeys() []ed25519.PublicKey {
 	// Этот комментарий под проверку не попадает: она ищет метку сразу после
 	// кавычки и запятой, как в строке с ключом.
 	encoded := []string{
-		"n8O6Ai33OUIh9meb91UtYW5YBmQQuUZA3FQkwBzvMvQ=", 
+		"n8O6Ai33OUIh9meb91UtYW5YBmQQuUZA3FQkwBzvMvQ=",
 	}
 
 	keys := make([]ed25519.PublicKey, 0, len(encoded))

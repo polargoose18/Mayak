@@ -35,7 +35,7 @@ func newRootCmdAt(now func() time.Time) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(newKeygenCmd(), newSignCmd(now), newVerifyCmd(now))
+	root.AddCommand(newKeygenCmd(), newPubkeyCmd(), newSignCmd(now), newVerifyCmd(now))
 	return root
 }
 
@@ -84,6 +84,31 @@ func runKeygen(cmd *cobra.Command, outDir string) error {
 	fmt.Fprintf(cmd.ErrOrStderr(), "private key written to %s; keep it out of the repository\n", path)
 	fmt.Fprintln(cmd.OutOrStdout(), base64.StdEncoding.EncodeToString(pub))
 	return nil
+}
+
+func newPubkeyCmd() *cobra.Command {
+	var keyPath string
+	cmd := &cobra.Command{
+		Use:   "pubkey --key <file>",
+		Short: "Print the public key of a key file as base64",
+		Long: `Print the public key that belongs to a private key file made by keygen: one
+line of base64, the same as keygen printed, and nothing else. It is the form
+that verify --pub takes and that goes into internal/targets/pubkeys.go.`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			priv, err := readPrivateKey(keyPath)
+			if err != nil {
+				return err
+			}
+			warnKeyMode(cmd, keyPath)
+			pub := priv.Public().(ed25519.PublicKey)
+			fmt.Fprintln(cmd.OutOrStdout(), base64.StdEncoding.EncodeToString(pub))
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&keyPath, "key", "", "private key file made by keygen")
+	_ = cmd.MarkFlagRequired("key")
+	return cmd
 }
 
 func newSignCmd(now func() time.Time) *cobra.Command {

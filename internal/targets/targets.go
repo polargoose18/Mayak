@@ -8,8 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
-	"unicode"
 	"unicode/utf8"
 )
 
@@ -67,27 +65,27 @@ func (t Targets) validate() error {
 	if len(t.Items) == 0 {
 		return invalid("list is empty")
 	}
-	seen := make(map[string]bool, len(t.Items))
+	seenID := make(map[string]bool, len(t.Items))
+	seenHost := make(map[string]bool, len(t.Items))
 	for i, it := range t.Items {
 		if it.ID == "" {
 			return invalid("items[%d]: empty id", i)
 		}
-		if seen[it.ID] {
-			return invalid("items[%d]: duplicate id %q", i, it.ID)
+		if seenID[it.ID] {
+			return invalid("items[%d]: duplicate id %s", i, show(it.ID))
 		}
-		seen[it.ID] = true
+		seenID[it.ID] = true
 
-		if it.Host == "" {
-			return invalid("items[%d]: empty host", i)
+		if problem := hostProblem(it.Host); problem != "" {
+			return invalid("items[%d]: %s", i, problem)
 		}
-		if strings.IndexFunc(it.Host, unicode.IsSpace) >= 0 {
-			return invalid("items[%d]: host contains whitespace", i)
+		if seenHost[it.Host] {
+			return invalid("items[%d]: duplicate host %s", i, show(it.Host))
 		}
-		if strings.Contains(it.Host, "://") {
-			return invalid("items[%d]: host contains a scheme", i)
-		}
+		seenHost[it.Host] = true
+
 		if !slices.Contains(Categories(), it.Category) {
-			return invalid("items[%d]: unknown category %q", i, it.Category)
+			return invalid("items[%d]: unknown category %s", i, show(string(it.Category)))
 		}
 		if utf8.RuneCountInString(it.Rationale) < MinRationaleLen {
 			return invalid("items[%d]: rationale shorter than %d chars", i, MinRationaleLen)

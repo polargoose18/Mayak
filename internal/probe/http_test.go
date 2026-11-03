@@ -21,7 +21,7 @@ import (
 
 func runHTTP(t *testing.T, timeout time.Duration, env *mockdpi.Env, req HTTPRequest) HTTPObservation {
 	t.Helper()
-	req.roots = env.CertPool
+	req.RootCAs = env.CertPool
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	obs, err := HTTP(ctx, req)
@@ -151,7 +151,7 @@ func TestHTTPRedirectIsNotFollowedAndBodyIsCapped(t *testing.T) {
 	do := func(path string) HTTPObservation {
 		ctx, cancel := context.WithTimeout(context.Background(), generous)
 		defer cancel()
-		obs, err := HTTP(ctx, HTTPRequest{Addr: a, Host: "example.com", Path: path, roots: pool})
+		obs, err := HTTP(ctx, HTTPRequest{Addr: a, Host: "example.com", Path: path, RootCAs: pool})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -178,7 +178,7 @@ func TestHTTPBodyReadFailure(t *testing.T) {
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), generous)
 	defer cancel()
-	obs, err := HTTP(ctx, HTTPRequest{Addr: a, Host: "example.com", roots: pool})
+	obs, err := HTTP(ctx, HTTPRequest{Addr: a, Host: "example.com", RootCAs: pool})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +237,7 @@ func TestHTTPValidationAndCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	r := httpReq(t, env.ControlTLS)
-	r.roots = env.CertPool
+	r.RootCAs = env.CertPool
 	if _, err := HTTP(ctx, r); !errors.Is(err, context.Canceled) {
 		t.Errorf("err = %v, want context.Canceled", err)
 	}

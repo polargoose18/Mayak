@@ -53,7 +53,9 @@ import (
 type ControlClient struct {
 	BaseURL string // e.g. https://ctrl.example:8443
 
-	roots *x509.CertPool // test override for the trusted CAs
+	// RootCAs are the trusted certificate authorities; nil means the system
+	// roots (ADR-006, B3).
+	RootCAs *x509.CertPool
 }
 
 // The only paths /v1/fetch is asked for: pages that are the same for every
@@ -124,7 +126,7 @@ func (c ControlClient) get(ctx context.Context, path string, query url.Values, o
 	if err != nil {
 		return fmt.Errorf("control %s: %w", path, err)
 	}
-	resp, err := newClient(c.roots).Do(req)
+	resp, err := newClient(c.RootCAs).Do(req)
 	if err != nil {
 		return fmt.Errorf("control %s: %w", path, err)
 	}

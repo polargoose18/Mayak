@@ -122,15 +122,7 @@ const (
 // the trusted set (normal for a CDN), only the TLS check of one of its
 // addresses decides.
 func analyzeDNS(d DNS) dnsState {
-	trusted := make(map[netip.Addr]bool)
-	for _, a := range append([]DNSAnswer{d.Control}, d.Public...) {
-		if a.Status != DNSOK {
-			continue
-		}
-		for _, ip := range a.Addrs {
-			trusted[ip.Unmap()] = true
-		}
-	}
+	trusted := trustedSet(d)
 
 	sys := d.System
 	if sys.Status == DNSOK {
@@ -170,6 +162,53 @@ func anyIn(addrs []netip.Addr, set map[netip.Addr]bool) bool {
 		}
 	}
 	return false
+}
+
+// NeedsAddrCheck reports whether analyzeDNS can use the TLS check of a system
+// address for this answer, that is, whether running it can change the verdict
+// from dnsUnverified to dnsConsistent or dnsTampered. It is false when no
+// check could help: there is no trusted answer, the system answer failed or is
+// empty, or it already holds a bogon (a proven tamper that the check does not
+// need). It is true when the system answer has addresses, none of them a
+// bogon, and none shared with the trusted set (SPEC section 5, rule 2;
+// ADR-006, B3).
+func NeedsAddrCheck(d DNS) bool {
+	trusted := trustedSet(d)
+	if len(trusted) == 0 {
+		return false
+	}
+	sys := d.System
+	if sys.Status != DNSOK || len(sys.Addrs) == 0 {
+		return false
+	}
+	if anyBogonNotTrusted(sys.Addrs, trusted) {
+		return false
+	}
+	return !anyIn(sys.Addrs, trusted)
+}
+
+func anyBogonNotTrusted(addrs []netip.Addr, trusted map[netip.Addr]bool) bool {
+	for _, ip := range addrs {
+		if ip = ip.Unmap(); isBogon(ip) && !trusted[ip] {
+			return true
+		}
+	}
+	return false
+}
+
+// trustedSet is every address the control node and the public resolvers
+// returned. It is the trusted side of rule 2.
+func trustedSet(d DNS) map[netip.Addr]bool {
+	trusted := make(map[netip.Addr]bool)
+	for _, a := range append([]DNSAnswer{d.Control}, d.Public...) {
+		if a.Status != DNSOK {
+			continue
+		}
+		for _, ip := range a.Addrs {
+			trusted[ip.Unmap()] = true
+		}
+	}
+	return trusted
 }
 
 // isBogon reports whether ip cannot be a legitimate public address of a

@@ -45,6 +45,10 @@ type TLSSNIRequest struct {
 	ControlAddr netip.AddrPort // IP of the control node, which accepts any SNI
 	Host        string         // the target's host name, used as SNI
 	NeutralSNI  string         // a harmless server name
+
+	// RootCAs are the trusted certificate authorities; nil means the system
+	// roots (ADR-006, B3).
+	RootCAs *x509.CertPool
 }
 
 // TLSHandshake is the result of one handshake. It holds no certificate data.
@@ -87,13 +91,15 @@ func (o TLSOutcome) handshake() classify.Handshake {
 // SNI to the target IP, a neutral SNI to the target IP, and the target SNI to
 // the control node. They run concurrently under one 8 second deadline, so the
 // whole test takes at most 8 seconds. A failed handshake is an outcome, not
-// an error; the error is for a bad request or a cancelled context.
+// an error; the error is for a bad request or a cancelled context. The
+// trusted roots come from req.RootCAs; nil means the system roots (ADR-006,
+// B3).
 func TLSSNI(ctx context.Context, req TLSSNIRequest) (TLSObservation, error) {
-	return tlsSNI(ctx, req, nil)
+	return tlsSNI(ctx, req, req.RootCAs)
 }
 
-// tlsSNI is TLSSNI with the trusted roots overridable for tests (nil means
-// the system roots).
+// tlsSNI is TLSSNI with the trusted roots passed explicitly; nil means the
+// system roots.
 func tlsSNI(ctx context.Context, req TLSSNIRequest, roots *x509.CertPool) (TLSObservation, error) {
 	if err := req.validate(); err != nil {
 		return TLSObservation{}, fmt.Errorf("tls_sni: %w", err)

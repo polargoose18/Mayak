@@ -44,7 +44,9 @@ type DNSRequest struct {
 	Control DNSServer
 	Public  []DNSServer
 
-	roots *x509.CertPool // test override for DoT certificates
+	// RootCAs are the trusted certificate authorities for the DoT queries;
+	// nil means the system roots (ADR-006, B3).
+	RootCAs *x509.CertPool
 }
 
 // DNSResult is one resolver's answer. The addresses are the public addresses
@@ -100,9 +102,9 @@ func DNS(ctx context.Context, req DNSRequest) (DNSObservation, error) {
 		}()
 	}
 	run(&obs.System, func() DNSResult { return lookupSystem(runCtx, system, req.Host) })
-	run(&obs.Control, func() DNSResult { return queryServer(runCtx, req.Control, req.Host, req.roots) })
+	run(&obs.Control, func() DNSResult { return queryServer(runCtx, req.Control, req.Host, req.RootCAs) })
 	for i, srv := range req.Public {
-		run(&obs.Public[i], func() DNSResult { return queryServer(runCtx, srv, req.Host, req.roots) })
+		run(&obs.Public[i], func() DNSResult { return queryServer(runCtx, srv, req.Host, req.RootCAs) })
 	}
 	wg.Wait()
 
@@ -205,9 +207,16 @@ func queryServer(ctx context.Context, srv DNSServer, host string, roots *x509.Ce
 // address is genuine (a CDN node the trusted resolvers did not list); a
 // certificate that is not means a stand-in server; no handshake (reset,
 // timeout, refused) proves nothing. It runs under the 8 second deadline of a
-// test. The error is for a bad request or a cancelled context.
+// test. The error is for a bad request or a cancelled context. It uses the
+// system roots; DNSAddrCheckRoots takes an explicit pool.
 func DNSAddrCheck(ctx context.Context, addr netip.AddrPort, host string) (classify.AddrCheck, error) {
 	return dnsAddrCheck(ctx, addr, host, nil)
+}
+
+// DNSAddrCheckRoots is DNSAddrCheck with the trusted roots overridable; nil
+// means the system roots (ADR-006, B3).
+func DNSAddrCheckRoots(ctx context.Context, addr netip.AddrPort, host string, roots *x509.CertPool) (classify.AddrCheck, error) {
+	return dnsAddrCheck(ctx, addr, host, roots)
 }
 
 func dnsAddrCheck(ctx context.Context, addr netip.AddrPort, host string, roots *x509.CertPool) (classify.AddrCheck, error) {

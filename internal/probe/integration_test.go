@@ -139,7 +139,7 @@ func (p pipeline) run(t *testing.T) classify.Observation {
 		System:  resolverVia(p.systemDNS(env)),
 		Control: udp(t, env.ControlDNS),
 		Public:  []DNSServer{dot(t, env.ControlDoT)},
-		roots:   env.CertPool,
+		RootCAs: env.CertPool,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -168,7 +168,7 @@ func (p pipeline) run(t *testing.T) classify.Observation {
 	o.TLS = tlsObs.Handshakes()
 
 	stubs := learnStubHashes(t, env)
-	h, err := HTTP(c, HTTPRequest{Addr: target, Host: host, Path: ControlPathRobots, KnownStubHashes: stubs, roots: env.CertPool})
+	h, err := HTTP(c, HTTPRequest{Addr: target, Host: host, Path: ControlPathRobots, KnownStubHashes: stubs, RootCAs: env.CertPool})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,11 +188,11 @@ func (p pipeline) run(t *testing.T) classify.Observation {
 		allow = p.allowlist(env)
 	}
 	cr, err := Ctrl(ctrlCtx, CtrlRequest{
-		Control:   ControlClient{BaseURL: p.controlURL(env, ctrl), roots: env.CertPool},
+		Control:   ControlClient{BaseURL: p.controlURL(env, ctrl), RootCAs: env.CertPool},
 		Anchors:   []string{p.anchor(env)},
 		Allowlist: allow,
 		Host:      host,
-		roots:     env.CertPool,
+		RootCAs:   env.CertPool,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -217,7 +217,7 @@ func learnStubHashes(t *testing.T, env *mockdpi.Env) []string {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), generous)
 	defer cancel()
-	obs, err := HTTP(ctx, HTTPRequest{Addr: addr(t, env.StubPageTLS), Host: dnsHost, Path: ControlPathRobots, roots: env.CertPool})
+	obs, err := HTTP(ctx, HTTPRequest{Addr: addr(t, env.StubPageTLS), Host: dnsHost, Path: ControlPathRobots, RootCAs: env.CertPool})
 	if err != nil {
 		t.Fatal(err)
 	}

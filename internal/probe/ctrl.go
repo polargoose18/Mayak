@@ -27,7 +27,9 @@ type CtrlRequest struct {
 	// The node finds the addresses itself.
 	Host string
 
-	roots *x509.CertPool // test override for the trusted CAs
+	// RootCAs are the trusted certificate authorities for the node and the
+	// anchors; nil means the system roots (ADR-006, B3).
+	RootCAs *x509.CertPool
 }
 
 // CtrlObservation is the result of the ctrl test.
@@ -89,7 +91,7 @@ func Ctrl(ctx context.Context, req CtrlRequest) (CtrlObservation, error) {
 	}()
 	go func() {
 		defer wg.Done()
-		obs.AnchorsAlive = anyAlive(firstCtx, req.Anchors, req.roots)
+		obs.AnchorsAlive = anyAlive(firstCtx, req.Anchors, req.RootCAs)
 	}()
 	wg.Wait()
 
@@ -99,7 +101,7 @@ func Ctrl(ctx context.Context, req CtrlRequest) (CtrlObservation, error) {
 		}
 	}
 	if !obs.ControlAlive && !obs.AnchorsAlive {
-		obs.AllowlistAlive = anyAlive(runCtx, req.Allowlist, req.roots)
+		obs.AllowlistAlive = anyAlive(runCtx, req.Allowlist, req.RootCAs)
 	}
 	obs.Ms = elapsed()
 

@@ -127,6 +127,8 @@ func (r DNSRequest) validate() error {
 	return nil
 }
 
+// lookupSystem resolves host through the system resolver. The addresses are
+// normalized: unmapped and deduplicated.
 func lookupSystem(ctx context.Context, r Resolver, host string) DNSResult {
 	elapsed := start()
 	addrs, err := r.LookupNetIP(ctx, "ip4", host)
@@ -135,15 +137,34 @@ func lookupSystem(ctx context.Context, r Resolver, host string) DNSResult {
 	switch {
 	case err == nil:
 		res.Status = classify.DNSOK
-		for _, a := range addrs {
-			res.Addrs = append(res.Addrs, a.Unmap())
-		}
+		res.Addrs = normalizeAddrs(addrs)
 	case errors.As(err, &dnsErr) && dnsErr.IsNotFound:
 		res.Status = classify.DNSNXDomain
 	default:
 		res.Status = classify.DNSFailure
 	}
 	return res
+}
+
+// normalizeAddrs maps v4-in-v6 addresses to plain v4 and drops duplicates
+// while keeping the order of first appearances. A resolver may report the same
+// address more than once, for example when several sources of the hosts
+// database answer the same name.
+func normalizeAddrs(addrs []netip.Addr) []netip.Addr {
+	if len(addrs) == 0 {
+		return nil
+	}
+	out := make([]netip.Addr, 0, len(addrs))
+	seen := make(map[netip.Addr]bool, len(addrs))
+	for _, a := range addrs {
+		a = a.Unmap()
+		if seen[a] {
+			continue
+		}
+		seen[a] = true
+		out = append(out, a)
+	}
+	return out
 }
 
 func queryServer(ctx context.Context, srv DNSServer, host string, roots *x509.CertPool) DNSResult {
@@ -169,6 +190,7 @@ func queryServer(ctx context.Context, srv DNSServer, host string, roots *x509.Ce
 					}
 				}
 			}
+			res.Addrs = normalizeAddrs(res.Addrs)
 		case dns.RcodeNameError:
 			res.Status = classify.DNSNXDomain
 		}

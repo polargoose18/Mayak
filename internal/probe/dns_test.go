@@ -179,6 +179,7 @@ func TestDNSSystemResolverResults(t *testing.T) {
 		ips  []netip.Addr
 	}{
 		{"answer", stubResolver{addrs: addrs("::ffff:203.0.113.5")}, classify.DNSOK, addrs("203.0.113.5")},
+		{"duplicate answers", stubResolver{addrs: addrs("203.0.113.5", "::ffff:203.0.113.5", "203.0.113.5")}, classify.DNSOK, addrs("203.0.113.5")},
 		{"nxdomain", stubResolver{err: &net.DNSError{IsNotFound: true}}, classify.DNSNXDomain, nil},
 		{"timeout", stubResolver{err: &net.DNSError{IsTimeout: true}}, classify.DNSFailure, nil},
 		{"other error", stubResolver{err: errors.New("boom")}, classify.DNSFailure, nil},

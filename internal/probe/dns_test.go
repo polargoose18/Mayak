@@ -38,7 +38,7 @@ func dot(t *testing.T, a string) DNSServer {
 
 func runDNS(t *testing.T, timeout time.Duration, env *mockdpi.Env, req DNSRequest) DNSObservation {
 	t.Helper()
-	req.roots = env.CertPool
+	req.RootCAs = env.CertPool
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	obs, err := DNS(ctx, req)

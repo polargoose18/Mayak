@@ -34,7 +34,9 @@ type HTTPRequest struct {
 	// served by operators.
 	KnownStubHashes []string
 
-	roots *x509.CertPool // test override for the trusted CAs
+	// RootCAs are the trusted certificate authorities; nil means the system
+	// roots (ADR-006, B3).
+	RootCAs *x509.CertPool
 }
 
 // HTTPObservation is the result of the http test. It holds no body, only its
@@ -70,7 +72,7 @@ func HTTP(ctx context.Context, req HTTPRequest) (HTTPObservation, error) {
 	defer cancel()
 
 	elapsed := start()
-	resp, err := fetch(runCtx, req.Addr, req.Host, path, req.roots)
+	resp, err := fetch(runCtx, req.Addr, req.Host, path, req.RootCAs)
 	obs := HTTPObservation{Ms: elapsed()}
 	if err != nil {
 		obs.Result = httpFailure(err)

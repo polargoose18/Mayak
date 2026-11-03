@@ -2,7 +2,8 @@
 // signed list, runs the probes within the load ceilings of SPEC section 5 and
 // classifies each target (ADR-006).
 //
-// This file holds only the shared types. The logic comes in later steps.
+// runner.go holds the shared types; target.go runs the checks of one target;
+// pool.go keeps the load ceilings; source.go gets the targets list.
 package runner
 
 import (
@@ -44,13 +45,25 @@ type Env struct {
 	// Control is the control node's API (SPEC section 21.1).
 	Control probe.ControlClient
 	// ControlTLS is the control node's IP and port for the tls_sni handshake
-	// with the target's name (SPEC section 19). Where it comes from in
-	// production is decided in steps B3 and B8 (ADR-006).
+	// with the target's name (SPEC section 19). In production it is the same
+	// node as Control, on the port its TLS listener accepts any SNI from
+	// (ADR-006, B3 and B8).
 	ControlTLS netip.AddrPort
 	// Anchors are URLs of sites that are always up, for the ctrl test.
 	Anchors []string
 	// Allowlist are URLs of sites that stay reachable in allowlist mode.
 	Allowlist []string
+	// NeutralSNI is a harmless server name for the second tls_sni handshake
+	// (SPEC section 5).
+	NeutralSNI string
+
+	// TargetPort is the port of a target's HTTPS service. Zero means
+	// probe.TLSPort (443). Tests bind the mock servers to a random port, so
+	// they set it; production leaves it zero.
+	TargetPort uint16
+	// KnownStubHashes are hex SHA-256 hashes of operator block pages, used by
+	// the http test (SPEC section 5). Empty means no stub is known.
+	KnownStubHashes []string
 
 	// RootCAs are the trusted certificate authorities; nil means the system
 	// roots.

@@ -295,8 +295,8 @@ func anchorURL(env *mockdpi.Env) string { return "https://" + env.ControlTLS + "
 
 func runCtrl(t *testing.T, env *mockdpi.Env, req CtrlRequest, useShort bool) CtrlObservation {
 	t.Helper()
-	req.roots = env.CertPool
-	req.Control.roots = env.CertPool
+	req.RootCAs = env.CertPool
+	req.Control.RootCAs = env.CertPool
 	timeout := generous
 	if useShort {
 		timeout = short
@@ -442,7 +442,7 @@ func TestCtrlAllowlistMode(t *testing.T) {
 func TestCtrlValidationAndCancel(t *testing.T) {
 	env := mockdpi.Start(t, mockdpi.Config{Control: true})
 	f := newFakeControl(t, true)
-	good := CtrlRequest{Control: f.client(), Anchors: []string{anchorURL(env)}, Host: dnsHost, roots: env.CertPool}
+	good := CtrlRequest{Control: f.client(), Anchors: []string{anchorURL(env)}, Host: dnsHost, RootCAs: env.CertPool}
 	tests := map[string]func(r *CtrlRequest){
 		"no control URL": func(r *CtrlRequest) { r.Control = ControlClient{} },
 		"no anchors":     func(r *CtrlRequest) { r.Anchors = nil },

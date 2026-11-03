@@ -51,7 +51,7 @@ func TestExportedHTTPHonoursRootCAs(t *testing.T) {
 	}
 }
 
-func TestExportedDNSHonoursRootCAsOverDoT(t *testing.T) {
+func TestExportedDNSAddrCheckHonoursRootCAs(t *testing.T) {
 	env := mockdpi.Start(t, mockdpi.Config{Control: true, CertNames: []string{dnsHost}})
 	res, err := DNSAddrCheckRoots(context.Background(), addr(t, env.ControlTLS), dnsHost, env.CertPool)
 	if err != nil {

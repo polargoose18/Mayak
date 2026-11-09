@@ -416,11 +416,11 @@ func TestIsBogon(t *testing.T) {
 		{"2606:4700::1111", false},
 	}
 	for _, tc := range tests {
-		if got := isBogon(netip.MustParseAddr(tc.ip)); got != tc.want {
-			t.Errorf("isBogon(%s) = %v, want %v", tc.ip, got, tc.want)
+		if got := IsBogon(netip.MustParseAddr(tc.ip)); got != tc.want {
+			t.Errorf("IsBogon(%s) = %v, want %v", tc.ip, got, tc.want)
 		}
 	}
-	if !isBogon(netip.Addr{}) {
+	if !IsBogon(netip.Addr{}) {
 		t.Error("the zero address must be a bogon")
 	}
 }

@@ -127,7 +127,7 @@ func analyzeDNS(d DNS) dnsState {
 	sys := d.System
 	if sys.Status == DNSOK {
 		for _, ip := range sys.Addrs {
-			if ip = ip.Unmap(); isBogon(ip) && !trusted[ip] {
+			if ip = ip.Unmap(); IsBogon(ip) && !trusted[ip] {
 				return dnsTampered
 			}
 		}
@@ -189,7 +189,7 @@ func NeedsAddrCheck(d DNS) bool {
 
 func anyBogonNotTrusted(addrs []netip.Addr, trusted map[netip.Addr]bool) bool {
 	for _, ip := range addrs {
-		if ip = ip.Unmap(); isBogon(ip) && !trusted[ip] {
+		if ip = ip.Unmap(); IsBogon(ip) && !trusted[ip] {
 			return true
 		}
 	}
@@ -211,11 +211,11 @@ func trustedSet(d DNS) map[netip.Addr]bool {
 	return trusted
 }
 
-// isBogon reports whether ip cannot be a legitimate public address of a
+// IsBogon reports whether ip cannot be a legitimate public address of a
 // service: private, loopback, link-local, multicast, unspecified, carrier
 // grade NAT (100.64.0.0/10) or reserved (240.0.0.0/4). Documentation ranges
 // are not treated as bogons, so they can be used in tests as "public".
-func isBogon(ip netip.Addr) bool {
+func IsBogon(ip netip.Addr) bool {
 	if !ip.IsValid() || ip.IsUnspecified() || ip.IsLoopback() || ip.IsPrivate() ||
 		ip.IsLinkLocalUnicast() || ip.IsMulticast() {
 		return true

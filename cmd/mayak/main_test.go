@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"testing"
+
+	"github.com/polargoose18/mayak/internal/runner"
 )
 
 func TestVersionCommand(t *testing.T) {
 	var out bytes.Buffer
-	cmd := newRootCmd()
+	cmd := newRootCmd(runner.Env{})
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{"version"})
 

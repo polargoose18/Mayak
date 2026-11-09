@@ -1,4 +1,4 @@
-.PHONY: test vet fmt check sign-check release-check
+.PHONY: test vet fmt check sign-check release-check targets-expiry
 
 test:
 	go test ./...
@@ -24,3 +24,9 @@ release-check:
 		exit 1; \
 	fi
 	@echo "release-check: no test key in pubkeys.go"
+
+# Warns when the built-in targets list is about to expire (within 7 days) or
+# has expired. Intentionally NOT part of `check`: an expiring list must not
+# block unrelated PRs. Re-sign the list (docs/KEYS.md, "Перед релизом").
+targets-expiry:
+	MAYAK_TARGETS_EXPIRY_GUARD=1 go test -count=1 -run '^TestEmbeddedListFreshness$$' ./targets

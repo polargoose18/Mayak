@@ -105,6 +105,7 @@ type Options struct {
 type Result struct {
 	Target  targets.Target
 	Verdict report.Verdict
+	Test    report.Test // the classifier stage that decided Verdict
 
 	// Observation is what the classifier was given.
 	Observation classify.Observation

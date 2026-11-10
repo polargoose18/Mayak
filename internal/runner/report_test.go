@@ -18,19 +18,6 @@ func TestBuildReport(t *testing.T) {
 		wantTest report.Test
 	}{
 		{report.VerdictOK, report.TestHTTP},
-		{report.VerdictDNSTamper, report.TestDNS},
-		{report.VerdictTimeoutUnknown, report.TestDNS},
-		{report.VerdictIPBlock, report.TestTCP},
-		{report.VerdictVendorDown, report.TestTCP},
-		{report.VerdictSNIBlock, report.TestTLSSNI},
-		{report.VerdictTLSIntercept, report.TestTLSSNI},
-		{report.VerdictHTTPStub, report.TestHTTP},
-		{report.VerdictVendorGeoblock, report.TestHTTP},
-		{report.VerdictQUICBlock, report.TestQUIC},
-		{report.VerdictInconclusive, report.TestCtrl},
-		{report.VerdictAllowlistMode, report.TestCtrl},
-		{report.VerdictFreezeAfterN, report.TestTCPFreeze},
-		{report.VerdictThrottled, report.TestThroughput},
 	}
 
 	for _, tc := range cases {
@@ -46,6 +33,7 @@ func TestBuildReport(t *testing.T) {
 			results := []Result{{
 				Target:   targets.Target{ID: "test-target", Host: "example.com"},
 				Verdict:  tc.verdict,
+				Test:     tc.wantTest,
 				Duration: 100 * time.Millisecond,
 				Ctrl: probe.CtrlObservation{
 					ControlAlive: true,
@@ -167,6 +155,7 @@ func TestBuildReportOmitsZeroEvidence(t *testing.T) {
 	results := []Result{{
 		Target:   targets.Target{ID: "t", Host: "example.com"},
 		Verdict:  report.VerdictOK,
+		Test:     report.TestHTTP,
 		Duration: 0,
 	}}
 	r, err := BuildReport(meta, results)
@@ -195,6 +184,7 @@ func TestBuildReportUnknownVerdict(t *testing.T) {
 	results := []Result{{
 		Target:   targets.Target{ID: "t", Host: "example.com"},
 		Verdict:  "unknown_verdict",
+		Test:     report.TestHTTP,
 		Duration: 1 * time.Millisecond,
 	}}
 	_, err := BuildReport(meta, results)
@@ -226,6 +216,7 @@ func TestBuildReportTooLarge(t *testing.T) {
 		results[i] = Result{
 			Target:   targets.Target{ID: "test-target", Host: "example.com"},
 			Verdict:  report.VerdictOK,
+			Test:     report.TestHTTP,
 			Duration: 1 * time.Millisecond,
 			HTTP: probe.HTTPObservation{
 				Result: classify.HTTPResponded,
@@ -321,25 +312,13 @@ func TestIPVersion(t *testing.T) {
 	})
 }
 
-func TestVerdictTableTotal(t *testing.T) {
-	meta := ReportMeta{
-		Ver:      "1.0",
-		OS:       report.OSLinux,
-		Rev:      "2026-01-01.1",
-		Now:      time.Now(),
-		IPVer:    4,
-		Resolver: report.ResolverISP,
-	}
-	for _, v := range report.Verdicts() {
-		t.Run(string(v), func(t *testing.T) {
-			results := []Result{{
-				Target:   targets.Target{ID: "t", Host: "example.com"},
-				Verdict:  v,
-				Duration: 1 * time.Millisecond,
-			}}
-			_, err := BuildReport(meta, results)
-			if err != nil {
-				t.Errorf("BuildReport(%q) error: %v", v, err)
+func TestBuildReportMissingOrInvalidTest(t *testing.T) {
+	meta := ReportMeta{Ver: "1.0", OS: report.OSLinux, Rev: "2026-01-01.1", Now: time.Now(), IPVer: 4, Resolver: report.ResolverISP}
+	for _, test := range []report.Test{"", "unknown_test"} {
+		t.Run(string(test), func(t *testing.T) {
+			_, err := BuildReport(meta, []Result{{Target: targets.Target{ID: "t"}, Verdict: report.VerdictOK, Test: test}})
+			if !errors.Is(err, report.ErrInvalid) {
+				t.Fatalf("BuildReport(test=%q) error = %v, want ErrInvalid", test, err)
 			}
 		})
 	}

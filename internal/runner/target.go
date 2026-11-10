@@ -46,7 +46,7 @@ func Check(ctx context.Context, env Env, t targets.Target) Result {
 	r.Observation.Ctrl = ctrlObs.ForClassifier()
 	if !r.Observation.Ctrl.ControlAlive || !r.Observation.Ctrl.AnchorsAlive {
 		// Nothing else can be trusted, so the target's network is not touched.
-		r.Verdict = classify.Classify(r.Observation)
+		r.Verdict, r.Test = classify.ClassifyWithTest(r.Observation)
 		return r
 	}
 
@@ -84,7 +84,7 @@ func Check(ctx context.Context, env Env, t targets.Target) Result {
 	trusted, ok := trustedAddr(r.Observation.DNS)
 	if !ok {
 		// No trusted IP to test: the classifier has no address to work with.
-		r.Verdict = classify.Classify(r.Observation)
+		r.Verdict, r.Test = classify.ClassifyWithTest(r.Observation)
 		return r
 	}
 	addr := env.targetAddr(trusted)
@@ -100,7 +100,7 @@ func Check(ctx context.Context, env Env, t targets.Target) Result {
 	if tcpObs.Result != classify.TCPOK {
 		// A failed connect decides the verdict (ip_block, vendor_down or
 		// inconclusive); a handshake cannot complete on a refused address.
-		r.Verdict = classify.Classify(r.Observation)
+		r.Verdict, r.Test = classify.ClassifyWithTest(r.Observation)
 		return r
 	}
 
@@ -121,7 +121,7 @@ func Check(ctx context.Context, env Env, t targets.Target) Result {
 	if r.Observation.TLS.TargetSNI != classify.HandshakeOK {
 		// A failed or intercepted handshake decides the verdict; the http
 		// test is not reached.
-		r.Verdict = classify.Classify(r.Observation)
+		r.Verdict, r.Test = classify.ClassifyWithTest(r.Observation)
 		return r
 	}
 
@@ -159,7 +159,7 @@ func Check(ctx context.Context, env Env, t targets.Target) Result {
 	}
 	r.Observation.HTTP = httpObs.ForClassifier(ref)
 
-	r.Verdict = classify.Classify(r.Observation)
+	r.Verdict, r.Test = classify.ClassifyWithTest(r.Observation)
 	return r
 }
 

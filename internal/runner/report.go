@@ -18,24 +18,6 @@ type ReportMeta struct {
 	Resolver string
 }
 
-// verdictTest maps a classifier verdict to the report test that produced it.
-var verdictTest = map[report.Verdict]report.Test{
-	report.VerdictOK:             report.TestHTTP,
-	report.VerdictDNSTamper:      report.TestDNS,
-	report.VerdictTimeoutUnknown: report.TestDNS,
-	report.VerdictIPBlock:        report.TestTCP,
-	report.VerdictVendorDown:     report.TestTCP,
-	report.VerdictSNIBlock:       report.TestTLSSNI,
-	report.VerdictTLSIntercept:   report.TestTLSSNI,
-	report.VerdictHTTPStub:       report.TestHTTP,
-	report.VerdictVendorGeoblock: report.TestHTTP,
-	report.VerdictQUICBlock:      report.TestQUIC,
-	report.VerdictInconclusive:   report.TestCtrl,
-	report.VerdictAllowlistMode:  report.TestCtrl,
-	report.VerdictFreezeAfterN:   report.TestTCPFreeze,
-	report.VerdictThrottled:      report.TestThroughput,
-}
-
 // OSName converts a Go runtime GOOS to the report's agent.os family.
 func OSName(goos string) string {
 	switch goos {
@@ -80,13 +62,12 @@ func BuildReport(meta ReportMeta, results []Result) (report.Report, error) {
 		TargetsRev: meta.Rev,
 	}
 	for _, r := range results {
-		test, ok := verdictTest[r.Verdict]
-		if !ok {
-			return report.Report{}, fmt.Errorf("build report: %w: unknown verdict", report.ErrInvalid)
+		if r.Test == "" {
+			return report.Report{}, fmt.Errorf("build report: %w: missing deciding test", report.ErrInvalid)
 		}
 		out.Results = append(out.Results, report.Result{
 			Target:   r.Target.ID,
-			Test:     test,
+			Test:     r.Test,
 			Verdict:  r.Verdict,
 			Evidence: evidence(r),
 		})

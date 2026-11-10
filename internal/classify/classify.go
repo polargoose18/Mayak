@@ -70,31 +70,38 @@ import (
 
 // Classify returns the verdict for one run against one target.
 func Classify(o Observation) report.Verdict {
+	verdict, _ := ClassifyWithTest(o)
+	return verdict
+}
+
+// ClassifyWithTest returns the verdict and the test whose rule decided it.
+// It follows Classify's rule order, including the deferred system DNS failure.
+func ClassifyWithTest(o Observation) (report.Verdict, report.Test) {
 	if !o.Ctrl.ControlAlive || !o.Ctrl.AnchorsAlive {
-		return classifyCtrlFailure(o.Ctrl)
+		return classifyCtrlFailure(o.Ctrl), report.TestCtrl
 	}
 
 	dns := analyzeDNS(o.DNS)
 	switch dns {
 	case dnsTampered:
-		return report.VerdictDNSTamper
+		return report.VerdictDNSTamper, report.TestDNS
 	case dnsNoTrustedAnswer, dnsUnverified:
-		return report.VerdictInconclusive
+		return report.VerdictInconclusive, report.TestDNS
 	}
 
-	if v, ok := classifyTransport(o); ok {
-		return v
+	if v, test, ok := classifyTransport(o); ok {
+		return v, test
 	}
 	if v, ok := classifyHTTP(o); ok {
-		return v
+		return v, report.TestHTTP
 	}
 	if quicBlocked(o.QUIC) {
-		return report.VerdictQUICBlock
+		return report.VerdictQUICBlock, report.TestQUIC
 	}
 	if dns == dnsSystemFailed {
-		return report.VerdictTimeoutUnknown
+		return report.VerdictTimeoutUnknown, report.TestDNS
 	}
-	return report.VerdictOK
+	return report.VerdictOK, report.TestHTTP
 }
 
 // classifyCtrlFailure handles rule 1 and its section 19 amendment.
@@ -225,7 +232,7 @@ func IsBogon(ip netip.Addr) bool {
 }
 
 // classifyTransport implements rules 3, 4 and 5 (and vendor_down).
-func classifyTransport(o Observation) (report.Verdict, bool) {
+func classifyTransport(o Observation) (report.Verdict, report.Test, bool) {
 	a := o.TLS.TargetSNI
 	vendorDown := o.Ctrl.TargetExternal == ExternalUnreachable
 
@@ -233,28 +240,28 @@ func classifyTransport(o Observation) (report.Verdict, bool) {
 	case TCPTimeout, TCPReset:
 		switch {
 		case completed(a):
-			return report.VerdictInconclusive, true // TCP failed yet TLS completed
+			return report.VerdictInconclusive, report.TestTCP, true // TCP failed yet TLS completed
 		case vendorDown:
-			return report.VerdictVendorDown, true
+			return report.VerdictVendorDown, report.TestTCP, true
 		}
-		return report.VerdictIPBlock, true
+		return report.VerdictIPBlock, report.TestTCP, true
 	case TCPOK:
 	default: // not run or unknown
-		return report.VerdictInconclusive, true
+		return report.VerdictInconclusive, report.TestTCP, true
 	}
 
 	switch {
 	case a == HandshakeCertInvalid:
-		return report.VerdictTLSIntercept, true
+		return report.VerdictTLSIntercept, report.TestTLSSNI, true
 	case failed(a):
 		if vendorDown {
-			return report.VerdictVendorDown, true
+			return report.VerdictVendorDown, report.TestTLSSNI, true
 		}
-		return classifyTargetSNIFailure(o.TLS), true
+		return classifyTargetSNIFailure(o.TLS), report.TestTLSSNI, true
 	case a == HandshakeOK:
-		return "", false
+		return "", "", false
 	}
-	return report.VerdictInconclusive, true // not run or unknown
+	return report.VerdictInconclusive, report.TestTLSSNI, true // not run or unknown
 }
 
 // classifyTargetSNIFailure explains a failed handshake with the target SNI.

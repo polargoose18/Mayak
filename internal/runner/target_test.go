@@ -132,6 +132,9 @@ func TestCheckVerdicts(t *testing.T) {
 		if r.Err != nil {
 			t.Fatalf("err = %v", r.Err)
 		}
+		if r.Test != report.TestHTTP {
+			t.Errorf("test = %q, want %q", r.Test, report.TestHTTP)
+		}
 		if r.Verdict != report.VerdictOK {
 			t.Errorf("verdict = %q, want ok\nobservation: %+v", r.Verdict, r.Observation)
 		}
@@ -157,6 +160,9 @@ func TestCheckVerdicts(t *testing.T) {
 		if r.Err != nil {
 			t.Fatalf("err = %v", r.Err)
 		}
+		if r.Test != report.TestTLSSNI {
+			t.Errorf("test = %q, want %q", r.Test, report.TestTLSSNI)
+		}
 		if r.Verdict != report.VerdictSNIBlock {
 			t.Errorf("verdict = %q, want sni_block\nobservation: %+v", r.Verdict, r.Observation)
 		}
@@ -178,6 +184,9 @@ func TestCheckVerdicts(t *testing.T) {
 		if r.Err != nil {
 			t.Fatalf("err = %v", r.Err)
 		}
+		if r.Test != report.TestDNS {
+			t.Errorf("test = %q, want %q", r.Test, report.TestDNS)
+		}
 		if r.Verdict != report.VerdictDNSTamper {
 			t.Errorf("verdict = %q, want dns_tamper\nobservation: %+v", r.Verdict, r.Observation)
 		}
@@ -198,6 +207,9 @@ func TestCheckVerdicts(t *testing.T) {
 		if r.Err != nil {
 			t.Fatalf("err = %v", r.Err)
 		}
+		if r.Test != report.TestHTTP {
+			t.Errorf("test = %q, want %q", r.Test, report.TestHTTP)
+		}
 		if r.Verdict != report.VerdictHTTPStub {
 			t.Errorf("verdict = %q, want http_stub\nobservation: %+v", r.Verdict, r.Observation)
 		}
@@ -213,6 +225,9 @@ func TestCheckVerdicts(t *testing.T) {
 		if r.Err != nil {
 			t.Fatalf("err = %v", r.Err)
 		}
+		if r.Test != report.TestTCP {
+			t.Errorf("test = %q, want %q", r.Test, report.TestTCP)
+		}
 		if r.Verdict != report.VerdictIPBlock {
 			t.Errorf("verdict = %q, want ip_block\nobservation: %+v", r.Verdict, r.Observation)
 		}
@@ -227,6 +242,9 @@ func TestCheckVerdicts(t *testing.T) {
 		r := Check(ctx, baseEnv(t, env, node, target.Port()), targetOf(testHost))
 		if r.Err != nil {
 			t.Fatalf("err = %v", r.Err)
+		}
+		if r.Test != report.TestTLSSNI {
+			t.Errorf("test = %q, want %q", r.Test, report.TestTLSSNI)
 		}
 		if r.Verdict != report.VerdictTimeoutUnknown {
 			t.Errorf("verdict = %q, want timeout_unknown\nobservation: %+v", r.Verdict, r.Observation)

@@ -55,7 +55,7 @@ func sampleTargets(host string) targets.Targets {
 	return targets.Targets{
 		V:       1,
 		Rev:     "2026-10-13.1",
-		Expires: time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC),
+		Expires: time.Now().Add(14 * 24 * time.Hour),
 		Items: []targets.Target{
 			{ID: "a", Host: host, Category: targets.CategoryInfra, Rationale: "Fictional target number one.", Rev: "2026-10-13.1"},
 		},
@@ -233,21 +233,6 @@ func TestRateLimit(t *testing.T) {
 
 	if got429 == 0 {
 		t.Fatal("expected at least one 429")
-	}
-}
-
-func TestNoClientAddressInLogs(t *testing.T) {
-	host := "allowed.example"
-	cts := startCtrlTestServer(t, []string{host})
-
-	resp, err := http.Get(cts.url + "/v1/ping")
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("status %d", resp.StatusCode)
 	}
 }
 

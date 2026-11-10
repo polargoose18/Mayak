@@ -187,7 +187,7 @@ func TestSignedTargetsFreshness(t *testing.T) {
 		{"future-invalid", list.Expires.Add(-365 * 24 * time.Hour), true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := loadCtrlTargets(path, tc.now)
+			_, err := loadCtrlTargets(path, t.TempDir(), tc.now)
 			if (err != nil) != tc.wantError {
 				t.Fatalf("load error %v, wantError %v", err, tc.wantError)
 			}

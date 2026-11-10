@@ -9,17 +9,19 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/polargoose18/mayak/internal/probe"
 	"github.com/polargoose18/mayak/internal/report"
 	"github.com/polargoose18/mayak/internal/runner"
 	"github.com/polargoose18/mayak/internal/targets"
 )
 
 // guardNoControl is printed when the build has no control node: without one
-// nothing can be measured, and nothing was touched.
-const guardNoControl = "mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent."
+// nothing can be measured, and no network requests were made.
+const guardNoControl = "mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent."
 
 // inconclusiveSentence is printed when every target of the run came out
 // inconclusive: the measurement itself cannot be trusted (ADR-006, Q5).
@@ -75,7 +77,7 @@ type checkFlags struct {
 	JSON        bool
 }
 
-func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
+func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) (resultErr error) {
 	ctx := cmd.Context()
 
 	// Ctrl-C stops the run; main maps this to exit code 130.
@@ -99,6 +101,23 @@ func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return &exitError{Code: 1, Err: fmt.Errorf("create the mayak directory %s: %w", dir, err)}
 	}
+
+	// Serialize the entire snapshot/load/pick/run/publication transaction.
+	// After an abnormal process exit the lock remains: remove it manually only
+	// after confirming that no mayak check process is running.
+	lockPath := filepath.Join(dir, "check.lock")
+	lock, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if errors.Is(err, os.ErrExist) {
+		return &exitError{Code: 1, Err: fmt.Errorf("mayak check is locked by %s. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running", lockPath)}
+	}
+	if err != nil {
+		return &exitError{Code: 1, Err: fmt.Errorf("acquire the mayak check lock %s: %w", lockPath, err)}
+	}
+	defer func() {
+		if err := errors.Join(lock.Close(), os.Remove(lockPath)); err != nil {
+			resultErr = &exitError{Code: 1, Err: fmt.Errorf("release the mayak check lock: %w", err)}
+		}
+	}()
 
 	// Stage state so cancellation never changes the accepted rev or rotation.
 	staged, err := os.MkdirTemp(dir, ".check-")
@@ -129,9 +148,19 @@ func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
 	}
 
 	// The guard runs before any network use: without a control node there is
-	// nothing to measure and nothing was touched.
-	if env.Control.BaseURL == "" {
-		fmt.Fprintln(cmd.ErrOrStderr(), guardNoControl)
+	// nothing to measure and no network requests are made.
+	configured := env.Control.BaseURL != "" && env.ControlTLS.IsValid() && env.ControlTLS.Port() != 0 && len(env.PublicResolvers) >= 2
+	for _, resolver := range append([]probe.DNSServer{env.ControlResolver}, env.PublicResolvers...) {
+		if !resolver.Addr.IsValid() || resolver.Addr.Port() == 0 ||
+			(resolver.Transport != probe.DNSTransportUDP && resolver.Transport != probe.DNSTransportDoT) ||
+			(resolver.Transport == probe.DNSTransportDoT && resolver.ServerName == "") {
+			configured = false
+		}
+	}
+	if !configured {
+		if _, err := fmt.Fprintln(cmd.ErrOrStderr(), guardNoControl); err != nil {
+			return &exitError{Code: 1, Err: fmt.Errorf("print the configuration notice: %w", err)}
+		}
 		return &exitError{Code: 2}
 	}
 
@@ -169,20 +198,24 @@ func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
 			}
 			return &exitError{Code: 2}
 		}
-		printText(cmd, results)
-		fmt.Fprintln(cmd.OutOrStdout(), inconclusiveSentence)
+		if err := printText(cmd, results); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), inconclusiveSentence); err != nil {
+			return &exitError{Code: 1, Err: fmt.Errorf("print the results: %w", err)}
+		}
 		return &exitError{Code: 2}
 	}
 
 	if f.JSON {
 		return printJSON(cmd, env, list, results)
 	}
-	printText(cmd, results)
-	return nil
+	return printText(cmd, results)
 }
 
 // interruptedOutput prints what an interrupted run produced and reports
-// exit 130. Text: the measured results, the summary, the interrupt sentence.
+// exit 130. Text: measured results and unmeasured rows, the summary, and
+// the interrupt sentence.
 // JSON: one array of only the measured results, or nothing on stdout when
 // none was measured. Results with Err set never reach the report.
 func interruptedOutput(cmd *cobra.Command, env runner.Env, list *targets.Targets, results []runner.Result) error {
@@ -198,8 +231,12 @@ func interruptedOutput(cmd *cobra.Command, env runner.Env, list *targets.Targets
 		}
 		return &exitError{Code: 130, Err: errInterrupted}
 	}
-	printText(cmd, measured)
-	fmt.Fprintln(cmd.OutOrStdout(), interruptSentence)
+	if err := printText(cmd, results); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(cmd.OutOrStdout(), interruptSentence); err != nil {
+		return &exitError{Code: 1, Err: fmt.Errorf("print the results: %w", err)}
+	}
 	return &exitError{Code: 130, Err: errInterrupted}
 }
 
@@ -223,10 +260,17 @@ func userDir() (string, error) {
 }
 
 // printText writes one line per result, a summary and the sending notice.
-func printText(cmd *cobra.Command, results []runner.Result) {
-	out := cmd.OutOrStdout()
+func printText(cmd *cobra.Command, results []runner.Result) error {
+	var text strings.Builder
+	out := &text
+	measured := 0
 	counts := map[report.Verdict]int{}
 	for _, r := range results {
+		if r.Err != nil {
+			fmt.Fprintf(out, "%s  not measured\n", r.Target.ID)
+			continue
+		}
+		measured++
 		counts[r.Verdict]++
 		sentence, ok := verdictSentence[r.Verdict]
 		if !ok {
@@ -234,7 +278,7 @@ func printText(cmd *cobra.Command, results []runner.Result) {
 		}
 		fmt.Fprintf(out, "%s  %s  %s\n", r.Target.ID, r.Verdict, sentence)
 	}
-	fmt.Fprintf(out, "Summary: %d checked", len(results))
+	fmt.Fprintf(out, "Summary: %d checked", measured)
 	for _, v := range report.Verdicts() {
 		if counts[v] == 0 {
 			continue
@@ -243,10 +287,14 @@ func printText(cmd *cobra.Command, results []runner.Result) {
 	}
 	fmt.Fprintln(out)
 
-	if len(results) > 0 && counts[report.VerdictInconclusive] == len(results) {
+	if measured > 0 && counts[report.VerdictInconclusive] == measured {
 		fmt.Fprintln(out, "The control node was unreachable, so nothing could be measured.")
 	}
 	fmt.Fprintln(out, "Nothing was sent.")
+	if _, err := fmt.Fprint(cmd.OutOrStdout(), text.String()); err != nil {
+		return &exitError{Code: 1, Err: fmt.Errorf("print the results: %w", err)}
+	}
+	return nil
 }
 
 // printJSON writes exactly one JSON array of report documents to stdout.

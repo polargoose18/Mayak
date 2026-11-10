@@ -13,12 +13,13 @@ import (
 
 // Compile-time deployment values; see ADR-006.
 //
-// Both are empty for now: no control node is deployed yet, so `mayak check`
+// All three are empty for now: no control node is deployed yet, so `mayak check`
 // refuses to measure (exit 2) until the project ships a build with a real
-// node. Filling them in is a one-line change here.
+// node. Control DNS is a separate resolver on the control host, not an HTTP endpoint.
 const (
 	defaultControlURL  = ""
 	defaultControlAddr = ""
+	defaultControlDNS  = ""
 )
 
 // productionEnv builds the Env of the real binary: the system resolver, the
@@ -30,9 +31,13 @@ func productionEnv() runner.Env {
 		// use.
 		SystemResolver: nil,
 
-		// The control node is the deployed one; both stay zero until a node
+		// The control node is the deployed one; these stay zero until a node
 		// exists (see the constants above).
 		Control: probe.ControlClient{BaseURL: defaultControlURL},
+		PublicResolvers: []probe.DNSServer{
+			{Addr: netip.MustParseAddrPort("1.1.1.1:853"), Transport: probe.DNSTransportDoT, ServerName: "cloudflare-dns.com"},
+			{Addr: netip.MustParseAddrPort("8.8.8.8:853"), Transport: probe.DNSTransportDoT, ServerName: "dns.google"},
+		},
 	}
 	if defaultControlAddr != "" {
 		ap, err := netip.ParseAddrPort(defaultControlAddr)
@@ -42,6 +47,13 @@ func productionEnv() runner.Env {
 			panic(fmt.Sprintf("bad defaultControlAddr %q: %v", defaultControlAddr, err))
 		}
 		env.ControlTLS = ap
+	}
+	if defaultControlDNS != "" {
+		ap, err := netip.ParseAddrPort(defaultControlDNS)
+		if err != nil {
+			panic(fmt.Sprintf("bad defaultControlDNS %q: %v", defaultControlDNS, err))
+		}
+		env.ControlResolver = probe.DNSServer{Addr: ap, Transport: probe.DNSTransportUDP}
 	}
 	env.Anchors = []string{"https://example.com/", "https://www.iana.org/"}
 	env.NeutralSNI = "example.net"

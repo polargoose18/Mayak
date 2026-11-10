@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/polargoose18/mayak/internal/probe"
 	"github.com/polargoose18/mayak/internal/report"
 	"github.com/polargoose18/mayak/internal/runner"
 	"github.com/polargoose18/mayak/internal/targets"
@@ -162,14 +163,18 @@ func checkEnv(t *testing.T, m *mockdpi.Env, node *testControl, targetPort uint16
 	return runner.Env{
 		SystemResolver:  resolverVia(m.ControlDNS),
 		ControlResolver: probeDNSServer(mustAddrPort(t, m.ControlDNS)),
-		Control:         probeControlClient(node.srv.URL, m.CertPool),
-		ControlTLS:      mustAddrPort(t, m.ControlTLS),
-		Anchors:         []string{"https://" + m.ControlTLS + "/"},
-		NeutralSNI:      "neutral.example",
-		TargetPort:      targetPort,
-		RootCAs:         m.CertPool,
-		Clock:           testClock{},
-		Rand:            zeroRand{},
+		PublicResolvers: []probe.DNSServer{
+			{Addr: mustAddrPort(t, m.ControlDoT), Transport: probe.DNSTransportDoT, ServerName: "localhost"},
+			probeDNSServer(mustAddrPort(t, m.ControlDNS)),
+		},
+		Control:    probeControlClient(node.srv.URL, m.CertPool),
+		ControlTLS: mustAddrPort(t, m.ControlTLS),
+		Anchors:    []string{"https://" + m.ControlTLS + "/"},
+		NeutralSNI: "neutral.example",
+		TargetPort: targetPort,
+		RootCAs:    m.CertPool,
+		Clock:      testClock{},
+		Rand:       zeroRand{},
 	}
 }
 
@@ -187,6 +192,7 @@ func mustAddrPort(t testing.TB, s string) netip.AddrPort {
 func setup(t *testing.T, opts mockdpi.Config, reachable bool) (runner.Env, string, *testControl) {
 	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
 	m := mockdpi.Start(t, opts)
 	targetPort := portOfTLS(t, m)
 	node := newTestControl(t, []string{testHost, "second.example"}, reachable)
@@ -305,6 +311,7 @@ func TestCheckBadTargetsKind(t *testing.T) {
 
 func TestCheckExpiredList(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
 	m := mockdpi.Start(t, mockdpi.Config{Control: true, CertNames: []string{testHost}})
 	node := newTestControl(t, []string{testHost, "second.example"}, true)
 	dir := t.TempDir()
@@ -382,4 +389,219 @@ func TestCheckAllowlistModeExitZero(t *testing.T) {
 	if !strings.Contains(stdout, "allowlist_mode") {
 		t.Fatalf("stdout = %q", stdout)
 	}
+}
+
+func TestProductionResolvers(t *testing.T) {
+	env := productionEnv()
+	want := []probe.DNSServer{
+		{Addr: netip.MustParseAddrPort("1.1.1.1:853"), Transport: probe.DNSTransportDoT, ServerName: "cloudflare-dns.com"},
+		{Addr: netip.MustParseAddrPort("8.8.8.8:853"), Transport: probe.DNSTransportDoT, ServerName: "dns.google"},
+	}
+	if len(env.PublicResolvers) != len(want) {
+		t.Fatalf("public resolvers = %+v, want %+v", env.PublicResolvers, want)
+	}
+	for i := range want {
+		if env.PublicResolvers[i] != want[i] {
+			t.Errorf("resolver %d = %+v, want %+v", i, env.PublicResolvers[i], want[i])
+		}
+	}
+	if env.ControlResolver.Addr.IsValid() {
+		t.Fatal("undeployed control resolver must remain empty")
+	}
+	t.Logf("production resolvers=%+v; undeployed control resolver=%+v", env.PublicResolvers, env.ControlResolver)
+}
+
+func TestCheckIncompleteEnvGuard(t *testing.T) {
+	for _, field := range []string{"url", "tls", "dns", "public"} {
+		t.Run(field, func(t *testing.T) {
+			env, path, node := setup(t, mockdpi.Config{Control: true}, true)
+			switch field {
+			case "url":
+				env.Control.BaseURL = ""
+			case "tls":
+				env.ControlTLS = netip.AddrPort{}
+			case "dns":
+				env.ControlResolver = probe.DNSServer{}
+			case "public":
+				env.PublicResolvers = env.PublicResolvers[:1]
+			}
+			stdout, stderr, err := runCheckCmd(t, env, "--targets-file", path)
+			if exitCodeOf(t, err) != 2 || stdout != "" || !strings.Contains(stderr, guardNoControl) {
+				t.Fatalf("exit=%d stdout=%q stderr=%q", exitCodeOf(t, err), stdout, stderr)
+			}
+			if node.requests.Load() != 0 {
+				t.Fatal("preflight used the network")
+			}
+			entries, err := os.ReadDir(agentDir(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 0 {
+				t.Fatalf("preflight left state: %v", entries)
+			}
+		})
+	}
+}
+
+type failedOutput struct{}
+
+func (failedOutput) Write([]byte) (int, error) { return 0, errors.New("stdout closed") }
+
+func TestCheckTextWriteError(t *testing.T) {
+	for _, mode := range []string{"normal", "inconclusive", "interrupted"} {
+		t.Run(mode, func(t *testing.T) {
+			env, path, node := setup(t, mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}, true)
+			ctx := context.Background()
+			if mode == "inconclusive" {
+				node.pingStatus = http.StatusServiceUnavailable
+				env.Anchors = []string{node.srv.URL + "/v1/ping"}
+			}
+			if mode == "interrupted" {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			}
+			cmd := newRootCmd(env)
+			cmd.SetOut(failedOutput{})
+			cmd.SetErr(&bytes.Buffer{})
+			cmd.SetContext(ctx)
+			cmd.SetArgs([]string{"check", "--targets-file", path})
+			t.Logf("surface=in-process CLI invocation=mayak check --targets-file %q mode=%s stdout=failedOutput", path, mode)
+			err := cmd.Execute()
+			if exitCodeOf(t, err) != 1 || !strings.Contains(err.Error(), "stdout closed") {
+				t.Fatalf("error=%v want stdout failure exit 1", err)
+			}
+			t.Logf("exit=1 error=%v", err)
+		})
+	}
+}
+
+func TestCheckMockDPIVerdicts(t *testing.T) {
+	for _, verdict := range []report.Verdict{report.VerdictSNIBlock, report.VerdictDNSTamper, report.VerdictHTTPStub, report.VerdictIPBlock} {
+		t.Run(string(verdict), func(t *testing.T) {
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			t.Setenv("APPDATA", t.TempDir())
+			cfg := mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}
+			switch verdict {
+			case report.VerdictSNIBlock:
+				cfg.ResetAfterHello = &mockdpi.ResetAfterHelloConfig{BlockedSNI: []string{testHost, "second.example"}}
+			case report.VerdictDNSTamper:
+				cfg.DNSSpoof = &mockdpi.DNSSpoofConfig{Names: []string{testHost}}
+			case report.VerdictHTTPStub:
+				cfg.StubPage = true
+			case report.VerdictIPBlock:
+				cfg.ClosedPort = true
+			}
+			m := mockdpi.Start(t, cfg)
+			node := newTestControl(t, []string{testHost, "second.example"}, true)
+			node.fetchFrom = mustAddrPort(t, m.ControlTLS)
+			node.roots = m.CertPool
+			env := checkEnv(t, m, node, portOfTLS(t, m))
+			switch verdict {
+			case report.VerdictSNIBlock:
+				env.TargetPort = portOf(t, m.ResetAfterHello)
+				env.ControlTLS = mustAddrPort(t, m.ResetAfterHello)
+			case report.VerdictDNSTamper:
+				env.SystemResolver = resolverVia(m.DNSSpoof)
+			case report.VerdictHTTPStub:
+				env.TargetPort = portOf(t, m.StubPageTLS)
+				stub, err := fetchPage(context.Background(), mustAddrPort(t, m.StubPageTLS), testHost, "/", m.CertPool)
+				if err != nil {
+					t.Fatal(err)
+				}
+				env.KnownStubHashes = []string{stub.BodyHash}
+			case report.VerdictIPBlock:
+				env.TargetPort = portOf(t, m.ClosedPort)
+			}
+			pub, priv := testKey(t)
+			env.PublicKeys = []ed25519.PublicKey{pub}
+			path := signedList(t, t.TempDir(), "2026-11-09.1", testNow.Add(24*time.Hour), priv)
+			stdout, stderr, err := runCheckCmd(t, env, "--targets-file", path)
+			if exitCodeOf(t, err) != 0 || stderr != "" || !strings.Contains(stdout, "t1  "+string(verdict)+"  "+verdictSentence[verdict]) || !strings.Contains(stdout, "Summary: 2 checked") || !strings.Contains(stdout, "Nothing was sent.") {
+				t.Fatalf("exit=%d stdout=%q stderr=%q", exitCodeOf(t, err), stdout, stderr)
+			}
+		})
+	}
+}
+
+func TestCheckConcurrentPublication(t *testing.T) {
+	env, _, node := setup(t, mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}, true)
+	pub, priv := testKey(t)
+	env.PublicKeys = []ed25519.PublicKey{pub}
+	newer := signedList(t, t.TempDir(), "2026-11-09.2", testNow.Add(24*time.Hour), priv)
+	older := signedList(t, t.TempDir(), "2026-11-09.1", testNow.Add(24*time.Hour), priv)
+	release := make(chan struct{})
+	defer close(release)
+	clock := &signalGateClock{gateClock: gateClock{parked: make(chan struct{})}, paused: make(chan struct{})}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	done := make(chan error, 1)
+	// Block only the pause; releasing it completes the newer command normally.
+	env.Clock = &publicationClock{signalGateClock: clock, release: release}
+	go func() { _, _, err := runCheckCtx(t, ctx, env, "--targets-file", newer); done <- err }()
+	select {
+	case <-clock.parked:
+	case <-ctx.Done():
+		t.Fatal("first command did not finish t1")
+	}
+	select {
+	case <-clock.paused:
+	case <-ctx.Done():
+		t.Fatal("first command did not pause")
+	}
+	requests := node.requests.Load()
+	competing := env
+	competing.Clock = testClock{}
+	stdout, stderr, err := runCheckCmd(t, competing, "--targets-file", older)
+	if exitCodeOf(t, err) != 1 || stdout != "" || !strings.Contains(stderr, "check.lock") || !strings.Contains(stderr, "no mayak check process is running") {
+		cancel()
+		<-done
+		t.Fatalf("competing exit=%d stdout=%q stderr=%q", exitCodeOf(t, err), stdout, stderr)
+	}
+	if node.requests.Load() != requests {
+		cancel()
+		<-done
+		t.Fatal("competing command reached network")
+	}
+	release <- struct{}{}
+	if err := <-done; err != nil {
+		t.Fatalf("first command failed: %v", err)
+	}
+	before := map[string]string{}
+	for _, name := range []string{runner.RevFile, runner.RotationFile} {
+		data, err := os.ReadFile(filepath.Join(agentDir(t), name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[name] = string(data)
+	}
+	if strings.TrimSpace(before[runner.RevFile]) != "2026-11-09.2" {
+		t.Fatalf("accepted rev=%q", before[runner.RevFile])
+	}
+	_, stderr, err = runCheckCmd(t, competing, "--targets-file", older)
+	if exitCodeOf(t, err) != 1 || !strings.Contains(stderr, "older") {
+		t.Fatalf("rollback not refused: %v %q", err, stderr)
+	}
+	for name, want := range before {
+		data, err := os.ReadFile(filepath.Join(agentDir(t), name))
+		if err != nil || string(data) != want {
+			t.Fatalf("%s changed: %q -> %q err=%v", name, want, data, err)
+		}
+		t.Logf("accepted %s unchanged after rejected competitor and rollback: %q", name, data)
+	}
+	if _, err := os.Stat(filepath.Join(agentDir(t), "check.lock")); !os.IsNotExist(err) {
+		t.Fatalf("lock not released: %v", err)
+	}
+}
+
+type publicationClock struct {
+	*signalGateClock
+	release <-chan struct{}
+}
+
+func (c *publicationClock) After(time.Duration) <-chan time.Time {
+	close(c.paused)
+	ch := make(chan time.Time, 1)
+	go func() { <-c.release; ch <- testNow }()
+	return ch
 }

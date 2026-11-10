@@ -140,8 +140,8 @@ func TestCheckInterruptText(t *testing.T) {
 	if !containsLine(stdout, "t1  ok  ") {
 		t.Errorf("stdout = %q, want the measured target's result line", stdout)
 	}
-	if containsLine(stdout, "t2") {
-		t.Errorf("stdout = %q, want no line for the target that never finished", stdout)
+	if !containsLine(stdout, "t2  not measured") {
+		t.Errorf("stdout = %q, want an explicit unmeasured target row", stdout)
 	}
 	if !containsLine(stdout, "Summary: 1 checked") {
 		t.Errorf("stdout = %q, want the measured-only summary", stdout)
@@ -153,7 +153,7 @@ func TestCheckInterruptText(t *testing.T) {
 
 // TestCheckInterruptBeforeStart cancels the run before any target starts:
 // the first pause wait has not begun, so Run returns immediately with no
-// results at all. Text prints no result lines, --json prints nothing to
+// measured results. Text prints unmeasured rows, --json prints nothing to
 // stdout, both exit 130.
 func TestCheckInterruptBeforeStart(t *testing.T) {
 	env, path, _ := setup(t, mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}, true)
@@ -168,8 +168,8 @@ func TestCheckInterruptBeforeStart(t *testing.T) {
 	if !containsLine(stdout, interruptSentence) {
 		t.Errorf("stdout = %q, want the interrupt sentence", stdout)
 	}
-	if containsLine(stdout, "  ok  ") || containsLine(stdout, "Summary: 2") {
-		t.Errorf("stdout = %q, want no result lines", stdout)
+	if !containsLine(stdout, "t1  not measured") || !containsLine(stdout, "t2  not measured") || !containsLine(stdout, "Summary: 0 checked") {
+		t.Errorf("stdout = %q, want both unmeasured rows and zero checked", stdout)
 	}
 
 	jsonOut, _, err := runCheckCtx(t, ctx, env, "--targets-file", path, "--json")
@@ -332,11 +332,13 @@ func TestCheckInterruptSignal(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
 	marker := filepath.Join(dir, "signal-ready")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, executable, "-test.run=^TestCheckInterruptSignal$", "-test.v")
-	cmd.Env = append(os.Environ(), "MAYAK_SIGNAL_HELPER=1", "MAYAK_SIGNAL_MARKER="+marker, "XDG_CONFIG_HOME="+dir, "TMPDIR="+dir, "TMP="+dir, "TEMP="+dir)
+	cmd.Env = append(os.Environ(), "MAYAK_SIGNAL_HELPER=1", "MAYAK_SIGNAL_MARKER="+marker, "XDG_CONFIG_HOME="+dir, "APPDATA="+dir, "TMPDIR="+dir, "TMP="+dir, "TEMP="+dir)
 	var out, errBuf bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errBuf
 	t.Logf("surface=OS subprocess invocation=%q env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER=%q XDG_CONFIG_HOME=%q", cmd.Args, marker, dir)

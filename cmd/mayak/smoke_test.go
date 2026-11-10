@@ -74,10 +74,13 @@ func buildBinary(t *testing.T, trusted ...ed25519.PublicKey) string {
 func runBinary(t *testing.T, bin string, args ...string) (code int, stdout, stderr string) {
 	t.Helper()
 	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
 	cmd := exec.Command(bin, args...)
 	cmd.Env = append(os.Environ(),
 		"HOME="+home,
 		"XDG_CONFIG_HOME="+filepath.Join(home, ".config"),
+		"APPDATA="+filepath.Join(home, "AppData"),
 	)
 	var out, errBuf bytes.Buffer
 	cmd.Stdout = &out
@@ -203,9 +206,11 @@ func TestSmokeLeavesNoStateOutsideTemp(t *testing.T) {
 	// we can list afterwards and assert nothing appeared in it.
 	bin := buildBinary(t)
 	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
 	config := filepath.Join(home, ".config")
 	cmd := exec.Command(bin, "check", "--limit", "3")
-	cmd.Env = append(os.Environ(), "HOME="+home, "XDG_CONFIG_HOME="+config)
+	cmd.Env = append(os.Environ(), "HOME="+home, "XDG_CONFIG_HOME="+config, "APPDATA="+config)
 	if err := cmd.Run(); err == nil {
 		t.Fatal("check --limit 3 should fail")
 	}

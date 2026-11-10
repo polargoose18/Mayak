@@ -1,0 +1,53 @@
+Post-merge verification on shared primary worktree
+Worktree: /home/goose/Documents/Mayak
+Branch: main
+HEAD: 0a6716f2cee60235b61114e66418c96ca91e47d3
+
+$ GIT_MASTER=1 git status --short --branch (before)
+## main...origin/main [ahead 14]
+?? .omo/evidence/block-b-1-code-review.md
+
+Unrelated untracked review file is preserved.
+
+$ make check
+go vet ./...
+go test ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	15.022s
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.166s
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	(cached)
+ok  	github.com/polargoose18/mayak/internal/classify	0.082s
+ok  	github.com/polargoose18/mayak/internal/probe	3.476s
+ok  	github.com/polargoose18/mayak/internal/report	(cached)
+ok  	github.com/polargoose18/mayak/internal/runner	2.467s
+ok  	github.com/polargoose18/mayak/internal/targets	(cached)
+ok  	github.com/polargoose18/mayak/targets	0.005s
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	(cached)
+
+make check exit code: 0
+
+$ make sign-check
+go test -count=1 -v -run '^TestSignedTargetsFile$' ./internal/targets
+=== RUN   TestSignedTargetsFile
+--- PASS: TestSignedTargetsFile (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/internal/targets	0.003s
+
+make sign-check exit code: 0
+
+$ GIT_MASTER=1 git status --short --branch (after)
+## main...origin/main [ahead 14]
+?? .omo/evidence/block-b-1-code-review.md
+?? .omo/evidence/mayak-block-b-finish/main-push-gates.log
+
+$ GIT_MASTER=1 git branch --show-current
+main
+$ GIT_MASTER=1 git rev-parse HEAD
+0a6716f2cee60235b61114e66418c96ca91e47d3
+
+Original make check monitor mon_K677YR2Y3G49PJFK: completed exit_code 0.
+Sequential make sign-check monitor mon_EJ5J6NAJ8VQN6PY5: completed exit_code 0.
+No duplicate make check was launched.
+Process inspection: no temporary Go test binaries, Mayak services, or gate processes remain.
+Executable file search in checkout excluding .git: no files found.
+Unrelated untracked .omo/evidence/block-b-1-code-review.md preserved without edits.
+No product edits, staging, commits, pushes, network operations, or remote CI actions performed.

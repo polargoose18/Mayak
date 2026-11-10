@@ -1,13 +1,163 @@
-F2-07 independent verification
-Working directory: /home/goose/Documents/Mayak-wt/block-b-final
+$ go test ./internal/runner -run TestReportProvenance\|TestBuildReportMissingOrInvalidTest -count=1 (red regression run)
+# github.com/polargoose18/mayak/internal/runner [github.com/polargoose18/mayak/internal/runner.test]
+internal/runner/provenance_test.go:125:24: undefined: classify.ClassifyWithTest
+internal/runner/provenance_test.go:133:101: unknown field Test in struct literal of type Result
+internal/runner/report_test.go:37:5: unknown field Test in struct literal of type Result
+internal/runner/report_test.go:159:3: unknown field Test in struct literal of type Result
+internal/runner/report_test.go:188:3: unknown field Test in struct literal of type Result
+internal/runner/report_test.go:220:3: unknown field Test in struct literal of type Result
+internal/runner/report_test.go:320:102: unknown field Test in struct literal of type Result
+internal/runner/target_test.go:135:8: r.Test undefined (type Result has no field or method Test)
+internal/runner/target_test.go:136:37: r.Test undefined (type Result has no field or method Test)
+internal/runner/target_test.go:163:8: r.Test undefined (type Result has no field or method Test)
+internal/runner/target_test.go:163:8: too many errors
+FAIL	github.com/polargoose18/mayak/internal/runner [build failed]
+FAIL
+exit=1
 
-$ gofmt -w internal/classify internal/runner
-gofmt exit=0
+$ gofmt -w internal/classify/classify.go internal/runner/{runner,target,report,report_test,target_test,provenance_test}.go
+exit=0
 
 $ go test ./internal/classify ./internal/runner -count=2
-ok  	github.com/polargoose18/mayak/internal/classify	0.138s
-ok  	github.com/polargoose18/mayak/internal/runner	4.726s
-go test exit=0
+ok  	github.com/polargoose18/mayak/internal/classify	0.212s
+ok  	github.com/polargoose18/mayak/internal/runner	4.689s
+exit=0
 
 $ go vet ./internal/classify ./internal/runner
-go vet exit=0
+exit=0
+
+$ go test ./internal/runner -run "TestReportProvenance|TestBuildReportMissingOrInvalidTest|TestCheckVerdicts" -count=1 -v
+=== RUN   TestReportProvenance
+=== RUN   TestReportProvenance/all_clear
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"bbe25ddc98","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"http","verdict":"ok","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/system_DNS_failure_otherwise_green
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"d253b1f004","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"dns","verdict":"timeout_unknown","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/unexplained_target_SNI_timeout
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"eafc67f7b5","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tls_sni","verdict":"timeout_unknown","evidence":{"tls_target_sni":"timeout","tls_via_control":"ok"}}]}
+=== RUN   TestReportProvenance/HTTP_timeout_after_good_TLS
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"f1334fb4a6","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"http","verdict":"timeout_unknown","evidence":{"http_result":"timeout","tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/TCP_failure_external_down
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"6235a47c7d","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tcp","verdict":"vendor_down"}]}
+=== RUN   TestReportProvenance/TLS_failure_external_down
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"46666b507a","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tls_sni","verdict":"vendor_down","evidence":{"tls_target_sni":"timeout"}}]}
+=== RUN   TestReportProvenance/HTTP_failure_external_down
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"7e84c7db1e","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"http","verdict":"vendor_down","evidence":{"http_result":"reset","tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/control_failure
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"77d1adda6e","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"ctrl","verdict":"inconclusive","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/allowlist_mode
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"706b928aac","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"ctrl","verdict":"allowlist_mode","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/DNS_tamper_precedes_TCP_failure
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"cb49466a8b","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"dns","verdict":"dns_tamper"}]}
+=== RUN   TestReportProvenance/no_trusted_DNS_answer
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"197f7773a5","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"dns","verdict":"inconclusive","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/unverified_DNS_answer
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"2b8f11c527","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"dns","verdict":"inconclusive","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/TCP_block
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"10f3612e28","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tcp","verdict":"ip_block"}]}
+=== RUN   TestReportProvenance/TCP_contradiction
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"abe5d411be","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tcp","verdict":"inconclusive","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/TCP_not_run
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"b37cc3d4f4","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tcp","verdict":"inconclusive"}]}
+=== RUN   TestReportProvenance/SNI_block
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"7d484f2cfc","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tls_sni","verdict":"sni_block","evidence":{"tls_neutral_sni":"ok","tls_target_sni":"reset_after_hello"}}]}
+=== RUN   TestReportProvenance/invalid_target_certificate
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"3321bf922a","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tls_sni","verdict":"tls_intercept","evidence":{"tls_target_sni":"cert_invalid"}}]}
+=== RUN   TestReportProvenance/TLS_unexplained_reset
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"cd171ffa11","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tls_sni","verdict":"inconclusive","evidence":{"tls_target_sni":"reset_after_hello"}}]}
+=== RUN   TestReportProvenance/TLS_not_run
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"f27faef08a","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tls_sni","verdict":"inconclusive"}]}
+=== RUN   TestReportProvenance/HTTP_stub_before_geoblock
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"c146d74abc","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"http","verdict":"http_stub","evidence":{"http_hash":"stub","http_result":"responded","http_size":20,"http_status":451,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/HTTP_geoblock
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"a78c1ca555","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"http","verdict":"vendor_geoblock","evidence":{"http_hash":"region","http_result":"responded","http_size":20,"http_status":403,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/HTTP_unexplained_reset
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"45c8c26194","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"http","verdict":"inconclusive","evidence":{"http_result":"reset","tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/QUIC_block
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"d600091bc1","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"quic","verdict":"quic_block","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+=== RUN   TestReportProvenance/DNS_system_failure_defers_to_TLS
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"cb32dd0ab4","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"tls_sni","verdict":"timeout_unknown","evidence":{"tls_target_sni":"timeout"}}]}
+=== RUN   TestReportProvenance/DNS_system_failure_defers_to_QUIC
+    provenance_test.go:148: validated JSON: {"schema":"mayak.report/1","report_id":"9826128a80","ts":"2026-11-09T00:00:00Z","agent":{"ver":"1.0","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"isp","country":"","region":null},"targets_rev":"2026-01-01.1","results":[{"target":"test-target","test":"quic","verdict":"quic_block","evidence":{"http_hash":"page","http_result":"responded","http_size":1000,"http_status":200,"tls_target_sni":"ok"}}]}
+--- PASS: TestReportProvenance (0.00s)
+    --- PASS: TestReportProvenance/all_clear (0.00s)
+    --- PASS: TestReportProvenance/system_DNS_failure_otherwise_green (0.00s)
+    --- PASS: TestReportProvenance/unexplained_target_SNI_timeout (0.00s)
+    --- PASS: TestReportProvenance/HTTP_timeout_after_good_TLS (0.00s)
+    --- PASS: TestReportProvenance/TCP_failure_external_down (0.00s)
+    --- PASS: TestReportProvenance/TLS_failure_external_down (0.00s)
+    --- PASS: TestReportProvenance/HTTP_failure_external_down (0.00s)
+    --- PASS: TestReportProvenance/control_failure (0.00s)
+    --- PASS: TestReportProvenance/allowlist_mode (0.00s)
+    --- PASS: TestReportProvenance/DNS_tamper_precedes_TCP_failure (0.00s)
+    --- PASS: TestReportProvenance/no_trusted_DNS_answer (0.00s)
+    --- PASS: TestReportProvenance/unverified_DNS_answer (0.00s)
+    --- PASS: TestReportProvenance/TCP_block (0.00s)
+    --- PASS: TestReportProvenance/TCP_contradiction (0.00s)
+    --- PASS: TestReportProvenance/TCP_not_run (0.00s)
+    --- PASS: TestReportProvenance/SNI_block (0.00s)
+    --- PASS: TestReportProvenance/invalid_target_certificate (0.00s)
+    --- PASS: TestReportProvenance/TLS_unexplained_reset (0.00s)
+    --- PASS: TestReportProvenance/TLS_not_run (0.00s)
+    --- PASS: TestReportProvenance/HTTP_stub_before_geoblock (0.00s)
+    --- PASS: TestReportProvenance/HTTP_geoblock (0.00s)
+    --- PASS: TestReportProvenance/HTTP_unexplained_reset (0.00s)
+    --- PASS: TestReportProvenance/QUIC_block (0.00s)
+    --- PASS: TestReportProvenance/DNS_system_failure_defers_to_TLS (0.00s)
+    --- PASS: TestReportProvenance/DNS_system_failure_defers_to_QUIC (0.00s)
+=== RUN   TestBuildReportMissingOrInvalidTest
+=== RUN   TestBuildReportMissingOrInvalidTest/#00
+=== RUN   TestBuildReportMissingOrInvalidTest/unknown_test
+--- PASS: TestBuildReportMissingOrInvalidTest (0.00s)
+    --- PASS: TestBuildReportMissingOrInvalidTest/#00 (0.00s)
+    --- PASS: TestBuildReportMissingOrInvalidTest/unknown_test (0.00s)
+=== RUN   TestCheckVerdicts
+=== RUN   TestCheckVerdicts/clean_target_is_ok
+=== RUN   TestCheckVerdicts/reset_after_hello_is_sni_block
+=== RUN   TestCheckVerdicts/dns_spoof_is_dns_tamper
+=== RUN   TestCheckVerdicts/stub_page_is_http_stub
+=== RUN   TestCheckVerdicts/closed_port_is_ip_block
+=== RUN   TestCheckVerdicts/blackhole_is_timeout_unknown
+--- PASS: TestCheckVerdicts (0.73s)
+    --- PASS: TestCheckVerdicts/clean_target_is_ok (0.01s)
+    --- PASS: TestCheckVerdicts/reset_after_hello_is_sni_block (0.00s)
+    --- PASS: TestCheckVerdicts/dns_spoof_is_dns_tamper (0.01s)
+    --- PASS: TestCheckVerdicts/stub_page_is_http_stub (0.01s)
+    --- PASS: TestCheckVerdicts/closed_port_is_ip_block (0.00s)
+    --- PASS: TestCheckVerdicts/blackhole_is_timeout_unknown (0.70s)
+PASS
+ok  	github.com/polargoose18/mayak/internal/runner	0.735s
+exit=0
+
+$ make check
+cmd/mayak-ctrl/hardening_test.go
+make: *** [Makefile:10: fmt] Error 1
+exit=2
+
+$ python3 .omo/evidence/mayak-block-b-finish/task-14-smoke-validate.py
+PASS all_clear: ok/http; Go report.Validate passed before emission; independent JSON parse passed
+PASS system_DNS_failure_otherwise_green: timeout_unknown/dns; Go report.Validate passed before emission; independent JSON parse passed
+PASS unexplained_target_SNI_timeout: timeout_unknown/tls_sni; Go report.Validate passed before emission; independent JSON parse passed
+PASS HTTP_timeout_after_good_TLS: timeout_unknown/http; Go report.Validate passed before emission; independent JSON parse passed
+PASS TCP_failure_external_down: vendor_down/tcp; Go report.Validate passed before emission; independent JSON parse passed
+PASS TLS_failure_external_down: vendor_down/tls_sni; Go report.Validate passed before emission; independent JSON parse passed
+PASS HTTP_failure_external_down: vendor_down/http; Go report.Validate passed before emission; independent JSON parse passed
+PASS control_failure: inconclusive/ctrl; Go report.Validate passed before emission; independent JSON parse passed
+PASS allowlist_mode: allowlist_mode/ctrl; Go report.Validate passed before emission; independent JSON parse passed
+PASS DNS_tamper_precedes_TCP_failure: dns_tamper/dns; Go report.Validate passed before emission; independent JSON parse passed
+PASS no_trusted_DNS_answer: inconclusive/dns; Go report.Validate passed before emission; independent JSON parse passed
+PASS unverified_DNS_answer: inconclusive/dns; Go report.Validate passed before emission; independent JSON parse passed
+PASS TCP_block: ip_block/tcp; Go report.Validate passed before emission; independent JSON parse passed
+PASS TCP_contradiction: inconclusive/tcp; Go report.Validate passed before emission; independent JSON parse passed
+PASS TCP_not_run: inconclusive/tcp; Go report.Validate passed before emission; independent JSON parse passed
+PASS SNI_block: sni_block/tls_sni; Go report.Validate passed before emission; independent JSON parse passed
+PASS invalid_target_certificate: tls_intercept/tls_sni; Go report.Validate passed before emission; independent JSON parse passed
+PASS TLS_unexplained_reset: inconclusive/tls_sni; Go report.Validate passed before emission; independent JSON parse passed
+PASS TLS_not_run: inconclusive/tls_sni; Go report.Validate passed before emission; independent JSON parse passed
+PASS HTTP_stub_before_geoblock: http_stub/http; Go report.Validate passed before emission; independent JSON parse passed
+PASS HTTP_geoblock: vendor_geoblock/http; Go report.Validate passed before emission; independent JSON parse passed
+PASS HTTP_unexplained_reset: inconclusive/http; Go report.Validate passed before emission; independent JSON parse passed
+PASS QUIC_block: quic_block/quic; Go report.Validate passed before emission; independent JSON parse passed
+PASS DNS_system_failure_defers_to_TLS: timeout_unknown/tls_sni; Go report.Validate passed before emission; independent JSON parse passed
+PASS DNS_system_failure_defers_to_QUIC: quic_block/quic; Go report.Validate passed before emission; independent JSON parse passed
+PASS independently inspected 25 reports; QA matrix includes 31 surface scenarios.
+exit=0

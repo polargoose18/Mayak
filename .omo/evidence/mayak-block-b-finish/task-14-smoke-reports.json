@@ -1,0 +1,711 @@
+{
+  "all_clear": {
+    "schema": "mayak.report/1",
+    "report_id": "bbe25ddc98",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "http",
+        "verdict": "ok",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "system_DNS_failure_otherwise_green": {
+    "schema": "mayak.report/1",
+    "report_id": "d253b1f004",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "dns",
+        "verdict": "timeout_unknown",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "unexplained_target_SNI_timeout": {
+    "schema": "mayak.report/1",
+    "report_id": "eafc67f7b5",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tls_sni",
+        "verdict": "timeout_unknown",
+        "evidence": {
+          "tls_target_sni": "timeout",
+          "tls_via_control": "ok"
+        }
+      }
+    ]
+  },
+  "HTTP_timeout_after_good_TLS": {
+    "schema": "mayak.report/1",
+    "report_id": "f1334fb4a6",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "http",
+        "verdict": "timeout_unknown",
+        "evidence": {
+          "http_result": "timeout",
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "TCP_failure_external_down": {
+    "schema": "mayak.report/1",
+    "report_id": "6235a47c7d",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tcp",
+        "verdict": "vendor_down"
+      }
+    ]
+  },
+  "TLS_failure_external_down": {
+    "schema": "mayak.report/1",
+    "report_id": "46666b507a",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tls_sni",
+        "verdict": "vendor_down",
+        "evidence": {
+          "tls_target_sni": "timeout"
+        }
+      }
+    ]
+  },
+  "HTTP_failure_external_down": {
+    "schema": "mayak.report/1",
+    "report_id": "7e84c7db1e",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "http",
+        "verdict": "vendor_down",
+        "evidence": {
+          "http_result": "reset",
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "control_failure": {
+    "schema": "mayak.report/1",
+    "report_id": "77d1adda6e",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "ctrl",
+        "verdict": "inconclusive",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "allowlist_mode": {
+    "schema": "mayak.report/1",
+    "report_id": "706b928aac",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "ctrl",
+        "verdict": "allowlist_mode",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "DNS_tamper_precedes_TCP_failure": {
+    "schema": "mayak.report/1",
+    "report_id": "cb49466a8b",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "dns",
+        "verdict": "dns_tamper"
+      }
+    ]
+  },
+  "no_trusted_DNS_answer": {
+    "schema": "mayak.report/1",
+    "report_id": "197f7773a5",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "dns",
+        "verdict": "inconclusive",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "unverified_DNS_answer": {
+    "schema": "mayak.report/1",
+    "report_id": "2b8f11c527",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "dns",
+        "verdict": "inconclusive",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "TCP_block": {
+    "schema": "mayak.report/1",
+    "report_id": "10f3612e28",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tcp",
+        "verdict": "ip_block"
+      }
+    ]
+  },
+  "TCP_contradiction": {
+    "schema": "mayak.report/1",
+    "report_id": "abe5d411be",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tcp",
+        "verdict": "inconclusive",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "TCP_not_run": {
+    "schema": "mayak.report/1",
+    "report_id": "b37cc3d4f4",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tcp",
+        "verdict": "inconclusive"
+      }
+    ]
+  },
+  "SNI_block": {
+    "schema": "mayak.report/1",
+    "report_id": "7d484f2cfc",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tls_sni",
+        "verdict": "sni_block",
+        "evidence": {
+          "tls_neutral_sni": "ok",
+          "tls_target_sni": "reset_after_hello"
+        }
+      }
+    ]
+  },
+  "invalid_target_certificate": {
+    "schema": "mayak.report/1",
+    "report_id": "3321bf922a",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tls_sni",
+        "verdict": "tls_intercept",
+        "evidence": {
+          "tls_target_sni": "cert_invalid"
+        }
+      }
+    ]
+  },
+  "TLS_unexplained_reset": {
+    "schema": "mayak.report/1",
+    "report_id": "cd171ffa11",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tls_sni",
+        "verdict": "inconclusive",
+        "evidence": {
+          "tls_target_sni": "reset_after_hello"
+        }
+      }
+    ]
+  },
+  "TLS_not_run": {
+    "schema": "mayak.report/1",
+    "report_id": "f27faef08a",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tls_sni",
+        "verdict": "inconclusive"
+      }
+    ]
+  },
+  "HTTP_stub_before_geoblock": {
+    "schema": "mayak.report/1",
+    "report_id": "c146d74abc",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "http",
+        "verdict": "http_stub",
+        "evidence": {
+          "http_hash": "stub",
+          "http_result": "responded",
+          "http_size": 20,
+          "http_status": 451,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "HTTP_geoblock": {
+    "schema": "mayak.report/1",
+    "report_id": "a78c1ca555",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "http",
+        "verdict": "vendor_geoblock",
+        "evidence": {
+          "http_hash": "region",
+          "http_result": "responded",
+          "http_size": 20,
+          "http_status": 403,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "HTTP_unexplained_reset": {
+    "schema": "mayak.report/1",
+    "report_id": "45c8c26194",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "http",
+        "verdict": "inconclusive",
+        "evidence": {
+          "http_result": "reset",
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "QUIC_block": {
+    "schema": "mayak.report/1",
+    "report_id": "d600091bc1",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "quic",
+        "verdict": "quic_block",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  },
+  "DNS_system_failure_defers_to_TLS": {
+    "schema": "mayak.report/1",
+    "report_id": "cb32dd0ab4",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "tls_sni",
+        "verdict": "timeout_unknown",
+        "evidence": {
+          "tls_target_sni": "timeout"
+        }
+      }
+    ]
+  },
+  "DNS_system_failure_defers_to_QUIC": {
+    "schema": "mayak.report/1",
+    "report_id": "9826128a80",
+    "ts": "2026-11-09T00:00:00Z",
+    "agent": {
+      "ver": "1.0",
+      "os": "linux",
+      "source": "cli"
+    },
+    "net": {
+      "ip_ver": 4,
+      "resolver": "isp",
+      "country": "",
+      "region": null
+    },
+    "targets_rev": "2026-01-01.1",
+    "results": [
+      {
+        "target": "test-target",
+        "test": "quic",
+        "verdict": "quic_block",
+        "evidence": {
+          "http_hash": "page",
+          "http_result": "responded",
+          "http_size": 1000,
+          "http_status": 200,
+          "tls_target_sni": "ok"
+        }
+      }
+    ]
+  }
+}

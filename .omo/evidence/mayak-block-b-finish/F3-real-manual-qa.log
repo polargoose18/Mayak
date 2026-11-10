@@ -1,0 +1,807 @@
+F3 independent QA 2026-11-09T19:55:50.706431+00:00
+
+$ git status --short
+
+EXIT_CODE=0
+
+$ git rev-parse HEAD
+ae0e5db437c375872f2972d6e91943278c666004
+
+EXIT_CODE=0
+
+$ make check
+go vet ./...
+go test ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	4.104s
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	(cached)
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	(cached)
+ok  	github.com/polargoose18/mayak/internal/classify	(cached)
+ok  	github.com/polargoose18/mayak/internal/probe	(cached)
+ok  	github.com/polargoose18/mayak/internal/report	(cached)
+ok  	github.com/polargoose18/mayak/internal/runner	(cached)
+ok  	github.com/polargoose18/mayak/internal/targets	(cached)
+ok  	github.com/polargoose18/mayak/targets	(cached)
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	(cached)
+
+EXIT_CODE=0
+
+$ make sign-check
+go test -count=1 -v -run '^TestSignedTargetsFile$' ./internal/targets
+=== RUN   TestSignedTargetsFile
+--- PASS: TestSignedTargetsFile (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/internal/targets	0.003s
+
+EXIT_CODE=0
+
+$ make release-check
+release-check: no test key in pubkeys.go
+
+EXIT_CODE=0
+
+$ go build ./...
+
+EXIT_CODE=0
+
+$ go test -race ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	10.026s
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	2.916s
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	1.582s
+ok  	github.com/polargoose18/mayak/internal/classify	2.884s
+ok  	github.com/polargoose18/mayak/internal/probe	6.755s
+ok  	github.com/polargoose18/mayak/internal/report	2.191s
+ok  	github.com/polargoose18/mayak/internal/runner	4.300s
+ok  	github.com/polargoose18/mayak/internal/targets	2.002s
+ok  	github.com/polargoose18/mayak/targets	1.077s
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	2.101s
+
+EXIT_CODE=0
+
+$ gofmt -l .
+
+EXIT_CODE=0
+
+$ go test ./cmd/mayak -run TestCheckInterruptSignal -count=1 -v
+=== RUN   TestCheckInterruptSignal
+    check_interrupt_test.go:342: surface=OS subprocess invocation=["/tmp/go-build3356734686/b001/mayak.test" "-test.run=^TestCheckInterruptSignal$" "-test.v"] env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER="/tmp/TestCheckInterruptSignal4101829494/001/signal-ready" XDG_CONFIG_HOME="/tmp/TestCheckInterruptSignal4101829494/001"
+    check_interrupt_test.go:359: marker="t1 complete; pool paused before t2\n"
+    check_interrupt_test.go:371: calling cmd.Process.Signal(os.Interrupt) pid=594788
+    check_interrupt_test.go:380: child test exit=0
+    check_interrupt_test.go:352: child stdout:
+        === RUN   TestCheckInterruptSignal
+            check_interrupt_test.go:309: surface=CLI signal.NotifyContext invocation=mayak check --targets-file "/tmp/TestCheckInterruptSignal4101829494/001/TestCheckInterruptSignal2872506900/002/targets.signed.json" --json
+            check_interrupt_test.go:323: state rotation byte-identical: before="2\n" after="2\n"
+            check_interrupt_test.go:323: state targets.rev byte-identical: before="2026-11-08.1\n" after="2026-11-08.1\n"
+        SIGNAL_CHILD_JSON=[{"schema":"mayak.report/1","report_id":"1fcdb8dacd","ts":"2026-11-09T12:00:00Z","agent":{"ver":"dev","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"unknown","country":"","region":null},"targets_rev":"2026-11-09.1","results":[{"target":"t1","test":"http","verdict":"ok","evidence":{"anchors_alive":true,"ctrl_alive":true,"dns_control":"ok","dns_system":"ok","external":"reachable","http_hash":"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398","http_result":"responded","http_size":75,"http_status":200,"tcp":"ok","tls_neutral_sni":"cert_invalid","tls_target_sni":"ok","tls_via_control":"ok"}}]}]
+        SIGNAL_CHILD_EXIT=130
+            check_interrupt_test.go:326: stderr=""
+        --- PASS: TestCheckInterruptSignal (0.02s)
+        PASS
+        
+        child stderr:
+--- PASS: TestCheckInterruptSignal (0.02s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak	0.028s
+
+EXIT_CODE=0
+
+$ MAYAK_TARGETS_EXPIRY_GUARD=1 go test -run '^TestEmbeddedListFreshness$' ./targets
+--- FAIL: TestEmbeddedListFreshness (0.00s)
+    embed_test.go:77: embedded targets list is about to expire: targets list expires 2026-11-11T00:00:00Z, which is within 168h0m0s of now (2026-11-09T22:56:48+03:00); re-sign it:
+          go run ./cmd/mayak-sign sign --key <key> --in targets/targets.json --out targets/targets.signed.json
+          make sign-check
+FAIL
+FAIL	github.com/polargoose18/mayak/targets	0.004s
+FAIL
+
+EXIT_CODE=1
+
+$ id
+uid=1000(goose) gid=1000(goose) groups=1000(goose),963(docker),992(input),998(wheel)
+EXIT_CODE=0
+
+$ command -v strace; command -v unshare; command -v ip; command -v openssl
+/usr/bin/strace
+/usr/bin/unshare
+/usr/bin/ip
+/usr/bin/openssl
+EXIT_CODE=0
+
+$ unshare --user --map-root-user --net true
+EXIT_CODE=0
+
+$ python3 -c 'import yaml,json; w=yaml.safe_load(open('"'"'.github/workflows/ci.yml'"'"')); assert set(w['"'"'jobs'"'"'])=={'"'"'check'"'"','"'"'windows'"'"','"'"'release-check'"'"'}; assert w['"'"'jobs'"'"']['"'"'windows'"'"']['"'"'runs-on'"'"']=='"'"'windows-2025'"'"'; print(json.dumps(w['"'"'jobs'"'"'],indent=2))'
+STDOUT:
+{
+  "check": {
+    "runs-on": "ubuntu-24.04",
+    "steps": [
+      {
+        "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+      },
+      {
+        "uses": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
+        "with": {
+          "go-version-file": "go.mod"
+        }
+      },
+      {
+        "run": "make check"
+      },
+      {
+        "run": "make sign-check"
+      },
+      {
+        "run": "make targets-expiry",
+        "continue-on-error": true
+      },
+      {
+        "run": "go test -race ./..."
+      },
+      {
+        "run": "go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./..."
+      }
+    ]
+  },
+  "windows": {
+    "runs-on": "windows-2025",
+    "steps": [
+      {
+        "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+      },
+      {
+        "uses": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
+        "with": {
+          "go-version-file": "go.mod"
+        }
+      },
+      {
+        "run": "go build ./..."
+      },
+      {
+        "run": "go test ./..."
+      }
+    ]
+  },
+  "release-check": {
+    "if": "startsWith(github.ref, 'refs/tags/v')",
+    "runs-on": "ubuntu-24.04",
+    "steps": [
+      {
+        "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+      },
+      {
+        "run": "make release-check"
+      }
+    ]
+  }
+}
+STDERR:
+EXIT_CODE=0
+
+$ go build -o /tmp/mayak-f3-cli-l468med8/mayak ./cmd/mayak
+STDOUT:
+STDERR:
+EXIT_CODE=0
+
+$ go build -o /tmp/mayak-f3-cli-l468med8/mayak-ctrl ./cmd/mayak-ctrl
+STDOUT:
+STDERR:
+EXIT_CODE=0
+
+SURFACE=CLI SCENARIO=version XDG_CONFIG_HOME=/tmp/mayak-f3-cli-l468med8/xdg-6lxba8rf
+
+$ /tmp/mayak-f3-cli-l468med8/mayak version
+STDOUT:
+dev
+STDERR:
+EXIT_CODE=0
+
+SURFACE=CLI SCENARIO=no-control XDG_CONFIG_HOME=/tmp/mayak-f3-cli-l468med8/xdg-xm24vs3q
+
+$ strace -f -e trace=network -o /home/goose/Documents/Mayak/.omo/evidence/mayak-block-b-finish/F3-no-control.strace /tmp/mayak-f3-cli-l468med8/mayak check
+STDOUT:
+STDERR:
+mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent.
+EXIT_CODE=2
+NETWORK_SYSCALL_LINES=[]
+
+SURFACE=CLI SCENARIO=json-no-control XDG_CONFIG_HOME=/tmp/mayak-f3-cli-l468med8/xdg-zk0iofyt
+
+$ /tmp/mayak-f3-cli-l468med8/mayak check --json
+STDOUT:
+STDERR:
+mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent.
+EXIT_CODE=2
+
+SURFACE=CLI SCENARIO=limit XDG_CONFIG_HOME=/tmp/mayak-f3-cli-l468med8/xdg-6c120uj4
+
+$ /tmp/mayak-f3-cli-l468med8/mayak check --limit 3
+STDOUT:
+STDERR:
+error: --limit must be between 5 and 20, got 3
+EXIT_CODE=1
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=mount --make-rprivate /
+STDOUT:
+STDERR:
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=ip link set lo up
+STDOUT:
+STDERR:
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=ip addr add 93.184.216.34/32 dev lo
+STDOUT:
+STDERR:
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=mount --bind /tmp/mayak-f3-ctrl-z5q2op6g/hosts /etc/hosts
+STDOUT:
+STDERR:
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/mayak-f3-ctrl-z5q2op6g/key.pem -out /tmp/mayak-f3-ctrl-z5q2op6g/cert.pem -days 1 -subj /CN=www.google.com -addext subjectAltName=DNS:www.google.com
+STDOUT:
+STDERR:
+..+..+.......+.....+......+..........+...+..+....+...+......+......+......+...+++++++++++++++++++++++++++++++++++++++*..+.+.....+...+.+++++++++++++++++++++++++++++++++++++++*.....+..+.............+..+......+.........+......+....+........+.+......+.....+...+......+..........+..+.......+..+.........+....+..+.+...+.....+......+.+..............+...+..........+......+..+....+...+..+...+...............+.+.....+....+...........+.+......+.....+.........+...+.......+.........+.....+.+......+..+.+..+............+.+...........+...+.+.....+.........+...+....+..................+..+......+.........+....+..+....+......+..+...++++++
+.+...+.+.....+++++++++++++++++++++++++++++++++++++++*.+..........+...+.....+...+..........+..+..............................+.......+...+...+.........+...+++++++++++++++++++++++++++++++++++++++*...........+.+.....+....+..+.+..................+..+..........+..+.......+......+............+.....+.+......+...+........+...+.+........+...+.............+............+..+...+....+......+....................+...+.........+.......+.........+..+....+...........+.........+.+...+...........++++++
+-----
+EXIT_CODE=0
+FIXTURE: temporary byte-identical copy of owner-signed targets list; isolated user/mount/network namespace; public upstream IP assigned only inside namespace; SSL_CERT_FILE trusts temporary local upstream certificate.
+
+SURFACE=CONTROL BINARY EXACT_INVOCATION=SSL_CERT_FILE=/tmp/mayak-f3-ctrl-z5q2op6g/cert.pem GODEBUG=netdns=go /home/goose/Documents/Mayak/.omo/evidence/mayak-block-b-finish/F3-mayak-ctrl.tmp --addr 127.0.0.1:18443 --tls-addr 127.0.0.1:19443 --targets /tmp/mayak-f3-ctrl-z5q2op6g/targets.signed.json
+CONTROL_STARTUP=any-SNI TLS certificate sha256 fingerprint: c847106babffd934257617997d10ce6a691b4e2d84e96ec4358e8f8aabba5827
+
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=openssl s_client -connect 127.0.0.1:19443 -servername arbitrary-f3.example -brief
+STDOUT:
+STDERR:
+Connecting to 127.0.0.1
+depth=0 CN=Mayak Control Node (ephemeral)
+verify error:num=18:self-signed certificate
+CONNECTION ESTABLISHED
+Protocol version: TLSv1.3
+Ciphersuite: TLS_AES_128_GCM_SHA256
+Peer certificate: CN=Mayak Control Node (ephemeral)
+Hash used: SHA256
+Signature type: ecdsa_secp256r1_sha256
+Verification error: self-signed certificate
+Negotiated TLS1.3 group: X25519MLKEM768
+EXIT_CODE=0
+SCENARIO any-sni PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+SCENARIO ping PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/reach?host=www.google.com'
+STDOUT:
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 19
+
+{"reachable":true}
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100     19 100     19   0      0  24869      0                              0
+100     19 100     19   0      0  23959      0                              0
+100     19 100     19   0      0  23199      0                              0
+EXIT_CODE=0
+SCENARIO reach PASS
+UPSTREAM_BODY=b'F3 local deterministic upstream\n' EXPECTED_FETCH={"status": 200, "size": 32, "body_hash": "016974217b03d93a03d117ae3e4fbf028595d9f79e90bdf38f48d8fdd673d942"}
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/fetch?host=www.google.com&path=/'
+STDOUT:
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 104
+
+{"body_hash":"016974217b03d93a03d117ae3e4fbf028595d9f79e90bdf38f48d8fdd673d942","size":32,"status":200}
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100    104 100    104   0      0   4370      0                              0
+100    104 100    104   0      0   4366      0                              0
+100    104 100    104   0      0   4362      0                              0
+EXIT_CODE=0
+SCENARIO fetch-root PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/fetch?host=www.google.com&path=/robots.txt'
+STDOUT:
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 104
+
+{"body_hash":"016974217b03d93a03d117ae3e4fbf028595d9f79e90bdf38f48d8fdd673d942","size":32,"status":200}
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100    104 100    104   0      0  35326      0                              0
+100    104 100    104   0      0  35005      0                              0
+100    104 100    104   0      0  34770      0                              0
+EXIT_CODE=0
+SCENARIO fetch-robots PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/reach?host=www.google.com&ip=10.22.33.44'
+STDOUT:
+HTTP/1.1 400 Bad Request
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 48
+
+only host (and path for /v1/fetch) are accepted
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100     48 100     48   0      0 174.9k      0                              0
+100     48 100     48   0      0 157.2k      0                              0
+100     48 100     48   0      0 146.4k      0                              0
+EXIT_CODE=0
+SCENARIO forbidden-ip PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/fetch?host=www.google.com&path=/&port=22'
+STDOUT:
+HTTP/1.1 400 Bad Request
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 48
+
+only host (and path for /v1/fetch) are accepted
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100     48 100     48   0      0 163.8k      0                              0
+100     48 100     48   0      0 151.2k      0                              0
+100     48 100     48   0      0 141.6k      0                              0
+EXIT_CODE=0
+SCENARIO forbidden-port PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/fetch?host=www.google.com&path=/etc/passwd'
+STDOUT:
+HTTP/1.1 400 Bad Request
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 30
+
+path must be / or /robots.txt
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100     30 100     30   0      0  93457      0                              0
+100     30 100     30   0      0  86705      0                              0
+100     30 100     30   0      0  81081      0                              0
+EXIT_CODE=0
+SCENARIO bad-path PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/reach?host=untrusted-f3.example'
+STDOUT:
+HTTP/1.1 400 Bad Request
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 32
+
+host is not in the targets list
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100     32 100     32   0      0 103.4k      0                              0
+100     32 100     32   0      0  98461      0                              0
+100     32 100     32   0      0  92485      0                              0
+EXIT_CODE=0
+SCENARIO unknown-host PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 15 'http://127.0.0.1:18443/v1/fetch?host=www.google.com&path=/&ip=%ZZ'
+STDOUT:
+HTTP/1.1 400 Bad Request
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 23
+
+invalid query encoding
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+100     23 100     23   0      0  79310      0                              0
+100     23 100     23   0      0  73482      0                              0
+100     23 100     23   0      0  68862      0                              0
+EXIT_CODE=0
+SCENARIO malformed-query PASS
+SURFACE=TCP EXACT_INVOCATION=socket.create_connection((127.0.0.1,19443)); sendall(b"GET / HTTP/1.1\r\nHost: arbitrary-f3.example\r\n\r\n"); recv(4096)
+TLS_PLAINTEXT_RESPONSE=b''
+SCENARIO tls-no-http PASS
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 200 OK
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+
+SURFACE=OS/HTTP/TLS EXACT_INVOCATION=curl -i --noproxy '*' --max-time 5 http://127.0.0.1:18443/v1/ping
+STDOUT:
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 09 Nov 2026 19:58:32 GMT
+Content-Length: 0
+
+STDERR:
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0
+EXIT_CODE=0
+SCENARIO rate-limit PASS
+TEARDOWN control PID=597247 EXIT_CODE=-15 COMPLETE_NODE_LOG:
+any-SNI TLS certificate sha256 fingerprint: c847106babffd934257617997d10ce6a691b4e2d84e96ec4358e8f8aabba5827
+
+SCENARIO privacy PASS
+TEARDOWN upstream stopped; thread_alive=False
+TEARDOWN connect_ex 127.0.0.1:18443 = 111
+SCENARIO port-closed-18443 PASS
+TEARDOWN connect_ex 127.0.0.1:19443 = 111
+SCENARIO port-closed-19443 PASS
+TEARDOWN connect_ex 93.184.216.34:443 = 111
+SCENARIO port-closed-443 PASS
+TEARDOWN temporary fixture directory scheduled for automatic removal: /tmp/mayak-f3-ctrl-z5q2op6g
+
+TEARDOWN removed temporary control executable /home/goose/Documents/Mayak/.omo/evidence/mayak-block-b-finish/F3-mayak-ctrl.tmp
+TEARDOWN absent /tmp/mayak-f3-cli-l468med8
+TEARDOWN absent /tmp/mayak-f3-ctrl-z5q2op6g
+$ git status --short
+EXIT_CODE=0
+NAMESPACE exited: private public-address assignment and hosts bind mount removed with namespace.

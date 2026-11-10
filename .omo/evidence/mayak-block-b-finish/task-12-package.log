@@ -1,0 +1,4 @@
+surface=CLI package tests
+invocation=go test ./cmd/mayak -count=1
+ok  	github.com/polargoose18/mayak/cmd/mayak	4.416s
+package_test_exit=0

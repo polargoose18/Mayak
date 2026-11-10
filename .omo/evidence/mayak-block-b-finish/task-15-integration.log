@@ -1,0 +1,112 @@
+Integration branch/HEAD at start:
+block-b-wave1
+5078a1d856e21799a8a66b2271299ef023cf0dd8
+
+Copied task-15 paths:
+cmd/mayak-ctrl/main.go
+cmd/mayak-ctrl/main_test.go
+cmd/mayak-ctrl/security_test.go
+cmd/mayak-ctrl/config.go
+cmd/mayak-ctrl/dial.go
+cmd/mayak-ctrl/handlers.go
+cmd/mayak-ctrl/ratelimit.go
+cmd/mayak-ctrl/server.go
+cmd/mayak-ctrl/tls.go
+cmd/mayak-ctrl/hardening_test.go
+
+===== gofmt -l cmd/mayak-ctrl/*.go =====
+$ gofmt -l cmd/mayak-ctrl/*.go
+lstat cmd/mayak-ctrl/*.go: no such file or directory
+[exit=2]
+
+===== go build ./cmd/mayak-ctrl =====
+$ go build ./cmd/mayak-ctrl
+[exit=0]
+
+===== go vet ./cmd/mayak-ctrl =====
+$ go vet ./cmd/mayak-ctrl
+[exit=0]
+
+===== go test ./cmd/mayak-ctrl -count=2 =====
+$ go test ./cmd/mayak-ctrl -count=2
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.393s
+[exit=0]
+
+===== make check =====
+$ make check
+go vet ./...
+go test ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	16.213s
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.359s
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	(cached)
+ok  	github.com/polargoose18/mayak/internal/classify	(cached)
+ok  	github.com/polargoose18/mayak/internal/probe	(cached)
+ok  	github.com/polargoose18/mayak/internal/report	(cached)
+ok  	github.com/polargoose18/mayak/internal/runner	(cached)
+ok  	github.com/polargoose18/mayak/internal/targets	(cached)
+ok  	github.com/polargoose18/mayak/targets	(cached)
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	(cached)
+[exit=0]
+
+===== make sign-check =====
+$ make sign-check
+go test -count=1 -v -run '^TestSignedTargetsFile$' ./internal/targets
+=== RUN   TestSignedTargetsFile
+--- PASS: TestSignedTargetsFile (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/internal/targets	0.003s
+[exit=0]
+
+===== integration worktree status after checks =====
+ M cmd/mayak-ctrl/main.go
+ M cmd/mayak-ctrl/main_test.go
+ M cmd/mayak-ctrl/security_test.go
+?? .omo/
+?? cmd/mayak-ctrl/config.go
+?? cmd/mayak-ctrl/dial.go
+?? cmd/mayak-ctrl/handlers.go
+?? cmd/mayak-ctrl/hardening_test.go
+?? cmd/mayak-ctrl/ratelimit.go
+?? cmd/mayak-ctrl/server.go
+?? cmd/mayak-ctrl/tls.go
+
+===== build artifact check =====
+mayak-ctrl binary exists
+
+===== corrected gofmt invocation (the initial wrapper expanded the glob outside the repo) =====
+$ (cd /home/goose/Documents/Mayak-wt/block-b-wave1 && gofmt -l cmd/mayak-ctrl/*.go)
+[exit=0]
+
+===== cleanup =====
+Removed generated build output: /home/goose/Documents/Mayak-wt/block-b-wave1/mayak-ctrl
+No task-15 implementation changes were made after copying.
+ M cmd/mayak-ctrl/main.go
+ M cmd/mayak-ctrl/main_test.go
+ M cmd/mayak-ctrl/security_test.go
+?? .omo/
+?? cmd/mayak-ctrl/config.go
+?? cmd/mayak-ctrl/dial.go
+?? cmd/mayak-ctrl/handlers.go
+?? cmd/mayak-ctrl/hardening_test.go
+?? cmd/mayak-ctrl/ratelimit.go
+?? cmd/mayak-ctrl/server.go
+?? cmd/mayak-ctrl/tls.go
+
+===== final integration branch/HEAD =====
+block-b-wave1
+5078a1d856e21799a8a66b2271299ef023cf0dd8
+
+===== final scoped changed paths and unrelated-work guard =====
+ M cmd/mayak-ctrl/main.go
+ M cmd/mayak-ctrl/main_test.go
+ M cmd/mayak-ctrl/security_test.go
+?? .omo/
+?? cmd/mayak-ctrl/config.go
+?? cmd/mayak-ctrl/dial.go
+?? cmd/mayak-ctrl/handlers.go
+?? cmd/mayak-ctrl/hardening_test.go
+?? cmd/mayak-ctrl/ratelimit.go
+?? cmd/mayak-ctrl/server.go
+?? cmd/mayak-ctrl/tls.go
+
+CLI duplicate modifications (expected empty):

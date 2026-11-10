@@ -1,0 +1,73 @@
+=== RUN   TestRejectMalformedQuery
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid
+    security_test.go:32: invalid query reached DNS lookup
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt
+    security_test.go:32: invalid query reached DNS lookup
+--- FAIL: TestRejectMalformedQuery (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid (0.00s)
+    --- FAIL: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt (0.00s)
+=== RUN   TestRateLimitAtCapacity
+    security_test.go:63: fresh client request 1 at full capacity: status 200, want 429
+--- FAIL: TestRateLimitAtCapacity (0.03s)
+=== RUN   TestResolveBogonRefusal
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/
+--- PASS: TestResolveBogonRefusal (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+=== RUN   TestBogonDialGuard
+--- PASS: TestBogonDialGuard (0.00s)
+=== RUN   TestFetchOversizedBody
+--- PASS: TestFetchOversizedBody (0.01s)
+=== RUN   TestSignedTargetsFreshness
+=== RUN   TestSignedTargetsFreshness/fresh
+=== RUN   TestSignedTargetsFreshness/expired
+    security_test.go:192: load error <nil>, wantError true
+=== RUN   TestSignedTargetsFreshness/future-invalid
+    security_test.go:192: load error <nil>, wantError true
+--- FAIL: TestSignedTargetsFreshness (0.00s)
+    --- PASS: TestSignedTargetsFreshness/fresh (0.00s)
+    --- FAIL: TestSignedTargetsFreshness/expired (0.00s)
+    --- FAIL: TestSignedTargetsFreshness/future-invalid (0.00s)
+FAIL
+FAIL	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.046s
+FAIL

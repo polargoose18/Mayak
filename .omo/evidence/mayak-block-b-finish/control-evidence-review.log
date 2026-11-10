@@ -1,0 +1,19 @@
+PASS: parsed exact reach key set and boolean value.
+PASS: parsed two exact fetch key sets with status 200, positive sizes and SHA-256 hex hashes.
+PASS: TLS transcript includes negotiated TLSv1.3, exit 0 and closed connection.
+PASS: actual server output contains neither 127.0.0.1 nor submitted 10.0.0.1.
+PASS: both scoped package test runs passed.
+PASS: ports 18443 and 18444 refuse connections after cleanup.
+SHA256 cmd/mayak-ctrl/main.go 2088ebc840b1dedaccd445298aaac55cdadea5d1ae08d96d29ff819318736db4
+SHA256 cmd/mayak-ctrl/main_test.go 592baa7177863cbe743df1c5ffaead9f1b42b00cc76dd4f925412123264ad7e6
+
+=== POST-FIX ARTIFACT REVIEW ===
+PASS: full requested scoped command output is present in both QA logs.
+PASS: each of six new regression groups passes twice, including expired/future-invalid signed lists, DNS bogons and exact oversized-body hash/size.
+PASS: all four malformed forbidden values and both duplicate singleton values return HTTP 400 in the binary transcript.
+PASS: 9,999 added clients received HTTP 200; the existing default client occupied bucket 10,000; all 21 fresh-client requests returned HTTP 429.
+PASS: target.example TLS handshake negotiated TLSv1.3 then closed.
+PASS: server output contains no client IP or SNI; process exit and closed ports are recorded.
+SHA256 cmd/mayak-ctrl/main.go 508d9eeceed995a8eb9ae2273f40a621d59829dd13467392f5fbfac3a81bad54
+SHA256 cmd/mayak-ctrl/main_test.go 592baa7177863cbe743df1c5ffaead9f1b42b00cc76dd4f925412123264ad7e6
+SHA256 cmd/mayak-ctrl/security_test.go d6cc103682dee96bff1a966fa8af63d8d288eb496dc89eb4075e68f90894a67c

@@ -1,0 +1,100 @@
+=== Task 10: Add Windows CI job ===
+Evidence collected: 2026-11-09
+
+--- 1. Workflow YAML parsed with real parser (python3 PyYAML) ---
+
+Commands:
+  python3 -c "import yaml,sys; d=yaml.safe_load(open('.github/workflows/ci.yml')); print('Jobs:', sorted(d['jobs'])); print(); print('check steps:'); [print('  -', step) for step in d['jobs']['check']['steps']]; print(); print('windows steps:'); [print('  -', step) for step in d['jobs']['windows']['steps']]"
+
+Output:
+Jobs: ['check', 'release-check', 'windows']
+
+check steps:
+  - {'uses': 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'}
+  - {'uses': 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e', 'with': {'go-version-file': 'go.mod'}}
+  - {'run': 'make check'}
+  - {'run': 'make sign-check'}
+  - {'run': 'go test -race ./...'}
+  - {'run': 'go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...'}
+
+windows steps:
+  - {'uses': 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'}
+  - {'uses': 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e', 'with': {'go-version-file': 'go.mod'}}
+  - {'run': 'go build ./...'}
+  - {'run': 'go test ./...'}
+
+--- 2. Ubuntu job unchanged: diff stat and full diff ---
+
+$ git diff --stat
+ .github/workflows/ci.yml | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+$ git diff .github/workflows/ci.yml
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0849cb..89b3021 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -22,6 +22,16 @@ jobs:
+       # Run as a pinned version, not added to go.mod. Raise the version by hand.
+       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+ 
++  windows:
++    runs-on: windows-2025
++    steps:
++      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
++      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
++        with:
++          go-version-file: go.mod
++      - run: go build ./...
++      - run: go test ./...
++
+   # Only on release tags: a release must not carry the test key.
+   release-check:
+     if: startsWith(github.ref, 'refs/tags/v')
+
+--- 3. Commands that the Windows job would run, validated on Linux ---
+
+$ go build ./... && go test ./... -count=1
+ok  	github.com/polargoose18/mayak/cmd/mayak	0.013s
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	0.057s
+ok  	github.com/polargoose18/mayak/internal/classify	0.154s
+ok  	github.com/polargoose18/mayak/internal/probe	3.508s
+ok  	github.com/polargoose18/mayak/internal/report	0.053s
+ok  	github.com/polargoose18/mayak/internal/runner	2.362s
+ok  	github.com/polargoose18/mayak/internal/targets	0.063s
+ok  	github.com/polargoose18/mayak/targets	0.006s
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	0.472s
+
+--- 4. make check output ---
+
+$ make check
+go vet ./...
+go test ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	0.049s
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	0.100s
+ok  	github.com/polargoose18/mayak/internal/classify	0.239s
+ok  	github.com/polargoose18/mayak/internal/probe	3.498s
+ok  	github.com/polargoose18/mayak/internal/report	0.059s
+ok  	github.com/polargoose18/mayak/internal/runner	2.365s
+ok  	github.com/polargoose18/mayak/internal/targets	0.043s
+ok  	github.com/polargoose18/mayak/targets	0.007s
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	0.494s
+
+--- 5. Adversarial: Windows-only compile error probe ---
+
+Created temporary file internal/probe/windows_test_temp.go:
+  //go:build windows
+  package probe
+  var _ = unknownWindowsOnlyIdentifierThatDoesNotExist
+
+$ GOOS=windows go build ./...
+internal/probe/windows_test_temp.go:5:9: undefined: unknownWindowsOnlyIdentifierThatDoesNotExist
+(exit code 1)
+
+Removed temp file and verified clean status:
+$ rm internal/probe/windows_test_temp.go
+$ git status --short
+ M .github/workflows/ci.yml
+
+--- 6. Final git status ---
+Only .github/workflows/ci.yml is modified; temp adversarial file fully removed.

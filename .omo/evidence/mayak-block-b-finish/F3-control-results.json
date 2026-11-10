@@ -1,0 +1,66 @@
+[
+  {
+    "id": "any-sni",
+    "verdict": "PASS"
+  },
+  {
+    "id": "ping",
+    "verdict": "PASS"
+  },
+  {
+    "id": "reach",
+    "verdict": "PASS"
+  },
+  {
+    "id": "fetch-root",
+    "verdict": "PASS"
+  },
+  {
+    "id": "fetch-robots",
+    "verdict": "PASS"
+  },
+  {
+    "id": "forbidden-ip",
+    "verdict": "PASS"
+  },
+  {
+    "id": "forbidden-port",
+    "verdict": "PASS"
+  },
+  {
+    "id": "bad-path",
+    "verdict": "PASS"
+  },
+  {
+    "id": "unknown-host",
+    "verdict": "PASS"
+  },
+  {
+    "id": "malformed-query",
+    "verdict": "PASS"
+  },
+  {
+    "id": "tls-no-http",
+    "verdict": "PASS"
+  },
+  {
+    "id": "rate-limit",
+    "verdict": "PASS"
+  },
+  {
+    "id": "privacy",
+    "verdict": "PASS"
+  },
+  {
+    "id": "port-closed-18443",
+    "verdict": "PASS"
+  },
+  {
+    "id": "port-closed-19443",
+    "verdict": "PASS"
+  },
+  {
+    "id": "port-closed-443",
+    "verdict": "PASS"
+  }
+]

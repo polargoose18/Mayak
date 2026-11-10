@@ -1,0 +1,81 @@
+surface=Go package tests invocation=go test ./cmd/mayak -count=1 -v
+=== RUN   TestCheckInterruptMidRun
+    check_interrupt_test.go:89: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptMidRun2693984906/002/targets.signed.json" "--json"]
+    check_interrupt_test.go:89: exit=130 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"0ae1f81ea3\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    check_interrupt_test.go:122: state before: rev="2026-11-08.1\n" rotation="2\n"; after: rev="2026-11-08.1\n" rotation="2\n"
+--- PASS: TestCheckInterruptMidRun (0.01s)
+=== RUN   TestCheckInterruptText
+    check_interrupt_test.go:131: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText3361211007/002/targets.signed.json"]
+    check_interrupt_test.go:131: exit=130 stdout="t1  ok  The site opened normally.\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+--- PASS: TestCheckInterruptText (0.01s)
+=== RUN   TestCheckInterruptBeforeStart
+    check_interrupt_test.go:159: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1055815657/002/targets.signed.json"]
+    check_interrupt_test.go:159: exit=130 stdout="Summary: 0 checked\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+    check_interrupt_test.go:170: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1055815657/002/targets.signed.json" "--json"]
+    check_interrupt_test.go:170: exit=130 stdout="" stderr=""
+    check_interrupt_test.go:189: cancelled before start: no state files or staging directories remain
+--- PASS: TestCheckInterruptBeforeStart (0.00s)
+=== RUN   TestCheckRunOK
+    check_test.go:218: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckRunOK531833714/002/targets.signed.json" "--limit" "5"]
+    check_test.go:218: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckRunOK (0.23s)
+=== RUN   TestCheckNoControlGuard
+    check_test.go:245: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckNoControlGuard4026177749/002/targets.signed.json"]
+    check_test.go:245: exit=2 stdout="" stderr="mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckNoControlGuard (0.00s)
+=== RUN   TestCheckJSON
+    check_test.go:259: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckJSON3295285597/002/targets.signed.json" "--json"]
+    check_test.go:259: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"e961e56a54\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+--- PASS: TestCheckJSON (0.23s)
+=== RUN   TestCheckLimitBounds
+    check_test.go:288: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds3051015520/002/targets.signed.json" "--limit" "3"]
+    check_test.go:288: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+    check_test.go:288: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds3051015520/002/targets.signed.json" "--limit" "4"]
+    check_test.go:288: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 4\n"
+    check_test.go:288: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds3051015520/002/targets.signed.json" "--limit" "21"]
+    check_test.go:288: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 21\n"
+--- PASS: TestCheckLimitBounds (0.01s)
+=== RUN   TestCheckBadTargetsKind
+    check_test.go:297: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckBadTargetsKind461844955/002/targets.signed.json" "--targets" "cat"]
+    check_test.go:297: exit=1 stdout="" stderr="error: --targets must be \"core\" or empty, got \"cat\"\n"
+--- PASS: TestCheckBadTargetsKind (0.01s)
+=== RUN   TestCheckExpiredList
+    check_test.go:317: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckExpiredList1256835449/002/targets.signed.json"]
+    check_test.go:317: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckExpiredList1256835449/002/targets.signed.json) expired on 2026-11-09. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestCheckExpiredList (0.01s)
+=== RUN   TestCheckDeadControlAnchorsDown
+=== RUN   TestCheckDeadControlAnchorsDown/json=false
+    check_test.go:339: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=false3077427589/002/targets.signed.json"]
+    check_test.go:339: exit=2 stdout="t1  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nt2  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nSummary: 2 checked, inconclusive 2\nThe control node was unreachable, so nothing could be measured.\nNothing was sent.\nThe control node was unreachable, so no result of this run can be trusted.\n" stderr=""
+=== RUN   TestCheckDeadControlAnchorsDown/json=true
+    check_test.go:339: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=true1111462994/002/targets.signed.json" "--json"]
+    check_test.go:339: exit=2 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"d043b19a6d\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"},{\"target\":\"t2\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"}]}]\n" stderr=""
+--- PASS: TestCheckDeadControlAnchorsDown (0.41s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=false (0.21s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=true (0.21s)
+=== RUN   TestCheckAllowlistModeExitZero
+    check_test.go:378: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckAllowlistModeExitZero3415830432/002/targets.signed.json"]
+    check_test.go:378: exit=0 stdout="t1  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nt2  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nSummary: 2 checked, allowlist_mode 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckAllowlistModeExitZero (0.21s)
+=== RUN   TestVersionCommand
+--- PASS: TestVersionCommand (0.00s)
+=== RUN   TestSmokeVersion
+    smoke_test.go:142: surface=real binary invocation=["/tmp/TestSmokeVersion1019122810/001/mayak" "version"]
+    smoke_test.go:142: exit=0 stdout="dev\n" stderr=""
+--- PASS: TestSmokeVersion (0.51s)
+=== RUN   TestSmokeExpiredList
+    smoke_test.go:157: surface=real binary invocation=["/tmp/TestSmokeExpiredList2855493667/001/mayak" "check" "--targets-file" "/tmp/TestSmokeExpiredList2855493667/002/targets.signed.json"]
+    smoke_test.go:157: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeExpiredList2855493667/002/targets.signed.json) expired on 2026-11-08. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestSmokeExpiredList (0.73s)
+=== RUN   TestSmokeForeignKeyList
+    smoke_test.go:177: surface=real binary invocation=["/tmp/TestSmokeForeignKeyList4111443586/001/mayak" "check" "--targets-file" "/tmp/TestSmokeForeignKeyList4111443586/002/targets.signed.json"]
+    smoke_test.go:177: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeForeignKeyList4111443586/002/targets.signed.json) is not signed by a key this mayak trusts. Use the list built into mayak or a list from the project.\n"
+--- PASS: TestSmokeForeignKeyList (0.55s)
+=== RUN   TestSmokeLimitOutOfRange
+    smoke_test.go:190: surface=real binary invocation=["/tmp/TestSmokeLimitOutOfRange230122970/001/mayak" "check" "--limit" "3"]
+    smoke_test.go:190: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+--- PASS: TestSmokeLimitOutOfRange (0.53s)
+=== RUN   TestSmokeLeavesNoStateOutsideTemp
+--- PASS: TestSmokeLeavesNoStateOutsideTemp (0.81s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak	4.253s

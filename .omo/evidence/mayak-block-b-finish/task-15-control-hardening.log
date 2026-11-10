@@ -1,0 +1,378 @@
+Task 15 control hardening verification
+Mon Nov  9 08:45:53 PM UTC 2026
+
+Surface: Go package compile. Invocation: go build -o /tmp/mayak-ctrl-task15 ./cmd/mayak-ctrl
+BUILD_EXIT=0
+
+Surface: Go static analysis. Invocation: go vet ./cmd/mayak-ctrl
+VET_EXIT=0
+
+Surfaces: restarted process, fake-clock authorization, curl -i HTTP, trusted TLS probe, privacy sinks. Invocation: go test ./cmd/mayak-ctrl -count=2 -v
+=== RUN   TestTargetsRollbackAfterRestart
+    hardening_test.go:79: surface=process restart invocation=["/tmp/go-build2791404046/b001/mayak-ctrl.test" "-test.run=^TestTargetsRollbackAfterRestart$" "-test.v"]; durable prior revision=2099-01-01.1 (seeded)
+    hardening_test.go:81: restart output:
+        === RUN   TestTargetsRollbackAfterRestart
+            hardening_test.go:37: restarted process rejected still-valid signed list: accept targets ../../targets/targets.signed.json: accept targets: targets list is older than the stored one: have 2099-01-01.1, got 2026-10-14.1
+        --- PASS: TestTargetsRollbackAfterRestart (0.00s)
+        PASS
+--- PASS: TestTargetsRollbackAfterRestart (0.00s)
+=== RUN   TestTargetsRejectBadSignature
+--- PASS: TestTargetsRejectBadSignature (0.00s)
+=== RUN   TestTargetsRuntimeExpiry
+    hardening_test.go:143: fake clock=2026-11-23 23:45:54.453527977 +0300 MSK m=+1209600.004523118 endpoint=/v1/reach?host=example.org status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:54.453527977 +0300 MSK m=+1209600.004523118 endpoint=/v1/fetch?host=example.org&path=/ status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:54.453527977 +0300 MSK m=+1209600.004523118 endpoint=/v1/ping status=200; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:55.453527977 +0300 MSK m=+1209601.004523118 endpoint=/v1/reach?host=example.org status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:55.453527977 +0300 MSK m=+1209601.004523118 endpoint=/v1/fetch?host=example.org&path=/ status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:55.453527977 +0300 MSK m=+1209601.004523118 endpoint=/v1/ping status=200; DNS=0 dial=0
+--- PASS: TestTargetsRuntimeExpiry (0.00s)
+=== RUN   TestStateDirConfig
+--- PASS: TestStateDirConfig (0.00s)
+=== RUN   TestNoClientAddressInLogs
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:32949/v1/ping"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 200 OK
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 0
+        
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:32949/v1/reach?host=allowed.example"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 19
+        
+        {"reachable":true}
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:32949/v1/reach?host=forbidden.example"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 32
+        
+        host is not in the targets list
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:32949/v1/fetch?host=allowed.example&path=/&ip=203.0.113.219"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 48
+        
+        only host (and path for /v1/fetch) are accepted
+    hardening_test.go:266: literal client-address search sink=HTTP logger bytes=0 found=false
+    hardening_test.go:266: literal client-address search sink=standard logger bytes=0 found=false
+    hardening_test.go:266: literal client-address search sink=stdout/stderr bytes=0 found=false
+    hardening_test.go:266: literal client-address search sink=retained application state bytes=666 found=false
+--- PASS: TestNoClientAddressInLogs (0.02s)
+=== RUN   TestProbeTLSSNIAnySNIListener
+    hardening_test.go:316: trusted probe.TLSSNI observation: {TargetSNI:{Outcome:ok Ms:1} NeutralSNI:{Outcome:ok Ms:1} TargetSNIViaControl:{Outcome:ok Ms:1}}
+--- PASS: TestProbeTLSSNIAnySNIListener (0.00s)
+=== RUN   TestControlHTTPWireSurface
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:40591/v1/ping"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 200 OK
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 0
+        
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:40591/v1/reach?host=allowed.example"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 32
+        
+        host is not in the targets list
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:40591/v1/fetch?host=allowed.example&path=/"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 32
+        
+        host is not in the targets list
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:40591/v1/reach?host=allowed.example&ip=127.0.0.1"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 48
+        
+        only host (and path for /v1/fetch) are accepted
+--- PASS: TestControlHTTPWireSurface (0.02s)
+=== RUN   TestPing
+--- PASS: TestPing (0.00s)
+=== RUN   TestReachTrue
+--- PASS: TestReachTrue (0.00s)
+=== RUN   TestReachFalse
+--- PASS: TestReachFalse (0.00s)
+=== RUN   TestHostNotInList
+--- PASS: TestHostNotInList (0.00s)
+=== RUN   TestRejectIPParam
+--- PASS: TestRejectIPParam (0.00s)
+=== RUN   TestBadPath
+--- PASS: TestBadPath (0.00s)
+=== RUN   TestRateLimit
+--- PASS: TestRateLimit (0.00s)
+=== RUN   TestAnySNIHanderCert
+--- PASS: TestAnySNIHanderCert (0.00s)
+=== RUN   TestAnySNIHanderDisabled
+--- PASS: TestAnySNIHanderDisabled (0.00s)
+=== RUN   TestAnySNIHandshake
+any-SNI TLS certificate sha256 fingerprint: 866a59793c25d7a85b239a895b4cf7b898d23dc9692d0ec4aa07e2e505237adb
+--- PASS: TestAnySNIHandshake (0.00s)
+=== RUN   TestFetchTimeout
+--- PASS: TestFetchTimeout (0.03s)
+=== RUN   TestRejectMalformedQuery
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt
+--- PASS: TestRejectMalformedQuery (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt (0.00s)
+=== RUN   TestRateLimitAtCapacity
+--- PASS: TestRateLimitAtCapacity (0.05s)
+=== RUN   TestResolveBogonRefusal
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/
+--- PASS: TestResolveBogonRefusal (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+=== RUN   TestBogonDialGuard
+--- PASS: TestBogonDialGuard (0.00s)
+=== RUN   TestFetchOversizedBody
+--- PASS: TestFetchOversizedBody (0.02s)
+=== RUN   TestSignedTargetsFreshness
+=== RUN   TestSignedTargetsFreshness/fresh
+=== RUN   TestSignedTargetsFreshness/expired
+=== RUN   TestSignedTargetsFreshness/future-invalid
+--- PASS: TestSignedTargetsFreshness (0.00s)
+    --- PASS: TestSignedTargetsFreshness/fresh (0.00s)
+    --- PASS: TestSignedTargetsFreshness/expired (0.00s)
+    --- PASS: TestSignedTargetsFreshness/future-invalid (0.00s)
+=== RUN   TestTargetsRollbackAfterRestart
+    hardening_test.go:79: surface=process restart invocation=["/tmp/go-build2791404046/b001/mayak-ctrl.test" "-test.run=^TestTargetsRollbackAfterRestart$" "-test.v"]; durable prior revision=2099-01-01.1 (seeded)
+    hardening_test.go:81: restart output:
+        === RUN   TestTargetsRollbackAfterRestart
+            hardening_test.go:37: restarted process rejected still-valid signed list: accept targets ../../targets/targets.signed.json: accept targets: targets list is older than the stored one: have 2099-01-01.1, got 2026-10-14.1
+        --- PASS: TestTargetsRollbackAfterRestart (0.00s)
+        PASS
+--- PASS: TestTargetsRollbackAfterRestart (0.01s)
+=== RUN   TestTargetsRejectBadSignature
+--- PASS: TestTargetsRejectBadSignature (0.00s)
+=== RUN   TestTargetsRuntimeExpiry
+    hardening_test.go:143: fake clock=2026-11-23 23:45:54.616542081 +0300 MSK m=+1209600.167537239 endpoint=/v1/reach?host=example.org status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:54.616542081 +0300 MSK m=+1209600.167537239 endpoint=/v1/fetch?host=example.org&path=/ status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:54.616542081 +0300 MSK m=+1209600.167537239 endpoint=/v1/ping status=200; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:55.616542081 +0300 MSK m=+1209601.167537239 endpoint=/v1/reach?host=example.org status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:55.616542081 +0300 MSK m=+1209601.167537239 endpoint=/v1/fetch?host=example.org&path=/ status=400; DNS=0 dial=0
+    hardening_test.go:143: fake clock=2026-11-23 23:45:55.616542081 +0300 MSK m=+1209601.167537239 endpoint=/v1/ping status=200; DNS=0 dial=0
+--- PASS: TestTargetsRuntimeExpiry (0.00s)
+=== RUN   TestStateDirConfig
+--- PASS: TestStateDirConfig (0.00s)
+=== RUN   TestNoClientAddressInLogs
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:44227/v1/ping"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 200 OK
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 0
+        
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:44227/v1/reach?host=allowed.example"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 19
+        
+        {"reachable":true}
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:44227/v1/reach?host=forbidden.example"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 32
+        
+        host is not in the targets list
+    hardening_test.go:236: surface=HTTP privacy invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:44227/v1/fetch?host=allowed.example&path=/&ip=203.0.113.219"]
+    hardening_test.go:245: privacy response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 48
+        
+        only host (and path for /v1/fetch) are accepted
+    hardening_test.go:266: literal client-address search sink=stdout/stderr bytes=0 found=false
+    hardening_test.go:266: literal client-address search sink=retained application state bytes=666 found=false
+    hardening_test.go:266: literal client-address search sink=HTTP logger bytes=0 found=false
+    hardening_test.go:266: literal client-address search sink=standard logger bytes=0 found=false
+--- PASS: TestNoClientAddressInLogs (0.03s)
+=== RUN   TestProbeTLSSNIAnySNIListener
+    hardening_test.go:316: trusted probe.TLSSNI observation: {TargetSNI:{Outcome:ok Ms:2} NeutralSNI:{Outcome:ok Ms:2} TargetSNIViaControl:{Outcome:ok Ms:2}}
+--- PASS: TestProbeTLSSNIAnySNIListener (0.00s)
+=== RUN   TestControlHTTPWireSurface
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:46541/v1/ping"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 200 OK
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 0
+        
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:46541/v1/reach?host=allowed.example"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 32
+        
+        host is not in the targets list
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:46541/v1/fetch?host=allowed.example&path=/"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 32
+        
+        host is not in the targets list
+    hardening_test.go:342: surface=HTTP invocation=curl ["-i" "--silent" "--show-error" "--max-time" "3" "http://127.0.0.1:46541/v1/reach?host=allowed.example&ip=127.0.0.1"]
+    hardening_test.go:344: raw response:
+        HTTP/1.1 400 Bad Request
+        Content-Type: text/plain; charset=utf-8
+        X-Content-Type-Options: nosniff
+        Date: Mon, 09 Nov 2026 20:45:54 GMT
+        Content-Length: 48
+        
+        only host (and path for /v1/fetch) are accepted
+--- PASS: TestControlHTTPWireSurface (0.03s)
+=== RUN   TestPing
+--- PASS: TestPing (0.00s)
+=== RUN   TestReachTrue
+--- PASS: TestReachTrue (0.00s)
+=== RUN   TestReachFalse
+--- PASS: TestReachFalse (0.00s)
+=== RUN   TestHostNotInList
+--- PASS: TestHostNotInList (0.00s)
+=== RUN   TestRejectIPParam
+--- PASS: TestRejectIPParam (0.00s)
+=== RUN   TestBadPath
+--- PASS: TestBadPath (0.00s)
+=== RUN   TestRateLimit
+--- PASS: TestRateLimit (0.00s)
+=== RUN   TestAnySNIHanderCert
+--- PASS: TestAnySNIHanderCert (0.00s)
+=== RUN   TestAnySNIHanderDisabled
+--- PASS: TestAnySNIHanderDisabled (0.00s)
+=== RUN   TestAnySNIHandshake
+any-SNI TLS certificate sha256 fingerprint: 66d7c5b22deb0379471afaa2511f0d1b600914950bcddcd5e1a88b395e486e5e
+--- PASS: TestAnySNIHandshake (0.00s)
+=== RUN   TestFetchTimeout
+--- PASS: TestFetchTimeout (0.03s)
+=== RUN   TestRejectMalformedQuery
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt
+--- PASS: TestRejectMalformedQuery (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt (0.00s)
+=== RUN   TestRateLimitAtCapacity
+--- PASS: TestRateLimitAtCapacity (0.06s)
+=== RUN   TestResolveBogonRefusal
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/
+--- PASS: TestResolveBogonRefusal (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+=== RUN   TestBogonDialGuard
+--- PASS: TestBogonDialGuard (0.00s)
+=== RUN   TestFetchOversizedBody
+--- PASS: TestFetchOversizedBody (0.02s)
+=== RUN   TestSignedTargetsFreshness
+=== RUN   TestSignedTargetsFreshness/fresh
+=== RUN   TestSignedTargetsFreshness/expired
+=== RUN   TestSignedTargetsFreshness/future-invalid
+--- PASS: TestSignedTargetsFreshness (0.00s)
+    --- PASS: TestSignedTargetsFreshness/fresh (0.00s)
+    --- PASS: TestSignedTargetsFreshness/expired (0.00s)
+    --- PASS: TestSignedTargetsFreshness/future-invalid (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.362s
+TEST_EXIT=0
+
+Production nonblank/noncomment line counts:
+cmd/mayak-ctrl/config.go: 83
+cmd/mayak-ctrl/dial.go: 44
+cmd/mayak-ctrl/handlers.go: 157
+cmd/mayak-ctrl/main.go: 31
+cmd/mayak-ctrl/ratelimit.go: 64
+cmd/mayak-ctrl/server.go: 61
+cmd/mayak-ctrl/tls.go: 98
+
+Formatting remaining:

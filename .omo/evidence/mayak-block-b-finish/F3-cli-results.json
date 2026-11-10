@@ -1,0 +1,51 @@
+[
+  {
+    "id": "CI",
+    "verdict": "PASS"
+  },
+  {
+    "id": "version",
+    "verdict": "PASS",
+    "exit_code": 0,
+    "invocation": [
+      "/tmp/mayak-f3-cli-l468med8/mayak",
+      "version"
+    ]
+  },
+  {
+    "id": "no-control",
+    "verdict": "PASS",
+    "exit_code": 2,
+    "invocation": [
+      "strace",
+      "-f",
+      "-e",
+      "trace=network",
+      "-o",
+      "/home/goose/Documents/Mayak/.omo/evidence/mayak-block-b-finish/F3-no-control.strace",
+      "/tmp/mayak-f3-cli-l468med8/mayak",
+      "check"
+    ]
+  },
+  {
+    "id": "json-no-control",
+    "verdict": "PASS",
+    "exit_code": 2,
+    "invocation": [
+      "/tmp/mayak-f3-cli-l468med8/mayak",
+      "check",
+      "--json"
+    ]
+  },
+  {
+    "id": "limit",
+    "verdict": "PASS",
+    "exit_code": 1,
+    "invocation": [
+      "/tmp/mayak-f3-cli-l468med8/mayak",
+      "check",
+      "--limit",
+      "3"
+    ]
+  }
+]

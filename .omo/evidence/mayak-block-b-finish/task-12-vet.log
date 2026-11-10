@@ -1,0 +1,3 @@
+surface=Go static analysis
+invocation=go vet ./cmd/mayak
+vet_exit=0

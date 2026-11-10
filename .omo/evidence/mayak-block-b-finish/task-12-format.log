@@ -1,0 +1,3 @@
+surface=Go format check
+invocation=gofmt -l cmd/mayak/check_interrupt_test.go
+gofmt_exit=0

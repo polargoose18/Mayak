@@ -1,0 +1,13 @@
+F2-07 independent verification
+Working directory: /home/goose/Documents/Mayak-wt/block-b-final
+
+$ gofmt -w internal/classify internal/runner
+gofmt exit=0
+
+$ go test ./internal/classify ./internal/runner -count=2
+ok  	github.com/polargoose18/mayak/internal/classify	0.138s
+ok  	github.com/polargoose18/mayak/internal/runner	4.726s
+go test exit=0
+
+$ go vet ./internal/classify ./internal/runner
+go vet exit=0

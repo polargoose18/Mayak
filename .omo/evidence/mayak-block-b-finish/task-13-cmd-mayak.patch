@@ -1,0 +1,576 @@
+diff --git a/cmd/mayak/check.go b/cmd/mayak/check.go
+index 46ce5d8..d9b4099 100644
+--- a/cmd/mayak/check.go
++++ b/cmd/mayak/check.go
+@@ -9,17 +9,19 @@ import (
+ 	"os/signal"
+ 	"path/filepath"
+ 	"runtime"
++	"strings"
+ 
+ 	"github.com/spf13/cobra"
+ 
++	"github.com/polargoose18/mayak/internal/probe"
+ 	"github.com/polargoose18/mayak/internal/report"
+ 	"github.com/polargoose18/mayak/internal/runner"
+ 	"github.com/polargoose18/mayak/internal/targets"
+ )
+ 
+ // guardNoControl is printed when the build has no control node: without one
+-// nothing can be measured, and nothing was touched.
+-const guardNoControl = "mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent."
++// nothing can be measured, and no network requests were made.
++const guardNoControl = "mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent."
+ 
+ // inconclusiveSentence is printed when every target of the run came out
+ // inconclusive: the measurement itself cannot be trusted (ADR-006, Q5).
+@@ -75,7 +77,7 @@ type checkFlags struct {
+ 	JSON        bool
+ }
+ 
+-func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
++func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) (resultErr error) {
+ 	ctx := cmd.Context()
+ 
+ 	// Ctrl-C stops the run; main maps this to exit code 130.
+@@ -100,6 +102,23 @@ func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
+ 		return &exitError{Code: 1, Err: fmt.Errorf("create the mayak directory %s: %w", dir, err)}
+ 	}
+ 
++	// Serialize the entire snapshot/load/pick/run/publication transaction.
++	// After an abnormal process exit the lock remains: remove it manually only
++	// after confirming that no mayak check process is running.
++	lockPath := filepath.Join(dir, "check.lock")
++	lock, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
++	if errors.Is(err, os.ErrExist) {
++		return &exitError{Code: 1, Err: fmt.Errorf("mayak check is locked by %s. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running", lockPath)}
++	}
++	if err != nil {
++		return &exitError{Code: 1, Err: fmt.Errorf("acquire the mayak check lock %s: %w", lockPath, err)}
++	}
++	defer func() {
++		if err := errors.Join(lock.Close(), os.Remove(lockPath)); err != nil {
++			resultErr = &exitError{Code: 1, Err: fmt.Errorf("release the mayak check lock: %w", err)}
++		}
++	}()
++
+ 	// Stage state so cancellation never changes the accepted rev or rotation.
+ 	staged, err := os.MkdirTemp(dir, ".check-")
+ 	if err != nil {
+@@ -129,9 +148,19 @@ func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
+ 	}
+ 
+ 	// The guard runs before any network use: without a control node there is
+-	// nothing to measure and nothing was touched.
+-	if env.Control.BaseURL == "" {
+-		fmt.Fprintln(cmd.ErrOrStderr(), guardNoControl)
++	// nothing to measure and no network requests are made.
++	configured := env.Control.BaseURL != "" && env.ControlTLS.IsValid() && env.ControlTLS.Port() != 0 && len(env.PublicResolvers) >= 2
++	for _, resolver := range append([]probe.DNSServer{env.ControlResolver}, env.PublicResolvers...) {
++		if !resolver.Addr.IsValid() || resolver.Addr.Port() == 0 ||
++			(resolver.Transport != probe.DNSTransportUDP && resolver.Transport != probe.DNSTransportDoT) ||
++			(resolver.Transport == probe.DNSTransportDoT && resolver.ServerName == "") {
++			configured = false
++		}
++	}
++	if !configured {
++		if _, err := fmt.Fprintln(cmd.ErrOrStderr(), guardNoControl); err != nil {
++			return &exitError{Code: 1, Err: fmt.Errorf("print the configuration notice: %w", err)}
++		}
+ 		return &exitError{Code: 2}
+ 	}
+ 
+@@ -169,20 +198,24 @@ func runCheck(cmd *cobra.Command, env runner.Env, f checkFlags) error {
+ 			}
+ 			return &exitError{Code: 2}
+ 		}
+-		printText(cmd, results)
+-		fmt.Fprintln(cmd.OutOrStdout(), inconclusiveSentence)
++		if err := printText(cmd, results); err != nil {
++			return err
++		}
++		if _, err := fmt.Fprintln(cmd.OutOrStdout(), inconclusiveSentence); err != nil {
++			return &exitError{Code: 1, Err: fmt.Errorf("print the results: %w", err)}
++		}
+ 		return &exitError{Code: 2}
+ 	}
+ 
+ 	if f.JSON {
+ 		return printJSON(cmd, env, list, results)
+ 	}
+-	printText(cmd, results)
+-	return nil
++	return printText(cmd, results)
+ }
+ 
+ // interruptedOutput prints what an interrupted run produced and reports
+-// exit 130. Text: the measured results, the summary, the interrupt sentence.
++// exit 130. Text: measured results and unmeasured rows, the summary, and
++// the interrupt sentence.
+ // JSON: one array of only the measured results, or nothing on stdout when
+ // none was measured. Results with Err set never reach the report.
+ func interruptedOutput(cmd *cobra.Command, env runner.Env, list *targets.Targets, results []runner.Result) error {
+@@ -198,8 +231,12 @@ func interruptedOutput(cmd *cobra.Command, env runner.Env, list *targets.Targets
+ 		}
+ 		return &exitError{Code: 130, Err: errInterrupted}
+ 	}
+-	printText(cmd, measured)
+-	fmt.Fprintln(cmd.OutOrStdout(), interruptSentence)
++	if err := printText(cmd, results); err != nil {
++		return err
++	}
++	if _, err := fmt.Fprintln(cmd.OutOrStdout(), interruptSentence); err != nil {
++		return &exitError{Code: 1, Err: fmt.Errorf("print the results: %w", err)}
++	}
+ 	return &exitError{Code: 130, Err: errInterrupted}
+ }
+ 
+@@ -223,10 +260,17 @@ func userDir() (string, error) {
+ }
+ 
+ // printText writes one line per result, a summary and the sending notice.
+-func printText(cmd *cobra.Command, results []runner.Result) {
+-	out := cmd.OutOrStdout()
++func printText(cmd *cobra.Command, results []runner.Result) error {
++	var text strings.Builder
++	out := &text
++	measured := 0
+ 	counts := map[report.Verdict]int{}
+ 	for _, r := range results {
++		if r.Err != nil {
++			fmt.Fprintf(out, "%s  not measured\n", r.Target.ID)
++			continue
++		}
++		measured++
+ 		counts[r.Verdict]++
+ 		sentence, ok := verdictSentence[r.Verdict]
+ 		if !ok {
+@@ -234,7 +278,7 @@ func printText(cmd *cobra.Command, results []runner.Result) {
+ 		}
+ 		fmt.Fprintf(out, "%s  %s  %s\n", r.Target.ID, r.Verdict, sentence)
+ 	}
+-	fmt.Fprintf(out, "Summary: %d checked", len(results))
++	fmt.Fprintf(out, "Summary: %d checked", measured)
+ 	for _, v := range report.Verdicts() {
+ 		if counts[v] == 0 {
+ 			continue
+@@ -243,10 +287,14 @@ func printText(cmd *cobra.Command, results []runner.Result) {
+ 	}
+ 	fmt.Fprintln(out)
+ 
+-	if len(results) > 0 && counts[report.VerdictInconclusive] == len(results) {
++	if measured > 0 && counts[report.VerdictInconclusive] == measured {
+ 		fmt.Fprintln(out, "The control node was unreachable, so nothing could be measured.")
+ 	}
+ 	fmt.Fprintln(out, "Nothing was sent.")
++	if _, err := fmt.Fprint(cmd.OutOrStdout(), text.String()); err != nil {
++		return &exitError{Code: 1, Err: fmt.Errorf("print the results: %w", err)}
++	}
++	return nil
+ }
+ 
+ // printJSON writes exactly one JSON array of report documents to stdout.
+diff --git a/cmd/mayak/check_interrupt_test.go b/cmd/mayak/check_interrupt_test.go
+index a817e81..439aaf7 100644
+--- a/cmd/mayak/check_interrupt_test.go
++++ b/cmd/mayak/check_interrupt_test.go
+@@ -140,8 +140,8 @@ func TestCheckInterruptText(t *testing.T) {
+ 	if !containsLine(stdout, "t1  ok  ") {
+ 		t.Errorf("stdout = %q, want the measured target's result line", stdout)
+ 	}
+-	if containsLine(stdout, "t2") {
+-		t.Errorf("stdout = %q, want no line for the target that never finished", stdout)
++	if !containsLine(stdout, "t2  not measured") {
++		t.Errorf("stdout = %q, want an explicit unmeasured target row", stdout)
+ 	}
+ 	if !containsLine(stdout, "Summary: 1 checked") {
+ 		t.Errorf("stdout = %q, want the measured-only summary", stdout)
+@@ -153,7 +153,7 @@ func TestCheckInterruptText(t *testing.T) {
+ 
+ // TestCheckInterruptBeforeStart cancels the run before any target starts:
+ // the first pause wait has not begun, so Run returns immediately with no
+-// results at all. Text prints no result lines, --json prints nothing to
++// measured results. Text prints unmeasured rows, --json prints nothing to
+ // stdout, both exit 130.
+ func TestCheckInterruptBeforeStart(t *testing.T) {
+ 	env, path, _ := setup(t, mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}, true)
+@@ -168,8 +168,8 @@ func TestCheckInterruptBeforeStart(t *testing.T) {
+ 	if !containsLine(stdout, interruptSentence) {
+ 		t.Errorf("stdout = %q, want the interrupt sentence", stdout)
+ 	}
+-	if containsLine(stdout, "  ok  ") || containsLine(stdout, "Summary: 2") {
+-		t.Errorf("stdout = %q, want no result lines", stdout)
++	if !containsLine(stdout, "t1  not measured") || !containsLine(stdout, "t2  not measured") || !containsLine(stdout, "Summary: 0 checked") {
++		t.Errorf("stdout = %q, want both unmeasured rows and zero checked", stdout)
+ 	}
+ 
+ 	jsonOut, _, err := runCheckCtx(t, ctx, env, "--targets-file", path, "--json")
+@@ -332,11 +332,13 @@ func TestCheckInterruptSignal(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	dir := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
++	t.Setenv("APPDATA", t.TempDir())
+ 	marker := filepath.Join(dir, "signal-ready")
+ 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+ 	defer cancel()
+ 	cmd := exec.CommandContext(ctx, executable, "-test.run=^TestCheckInterruptSignal$", "-test.v")
+-	cmd.Env = append(os.Environ(), "MAYAK_SIGNAL_HELPER=1", "MAYAK_SIGNAL_MARKER="+marker, "XDG_CONFIG_HOME="+dir, "TMPDIR="+dir, "TMP="+dir, "TEMP="+dir)
++	cmd.Env = append(os.Environ(), "MAYAK_SIGNAL_HELPER=1", "MAYAK_SIGNAL_MARKER="+marker, "XDG_CONFIG_HOME="+dir, "APPDATA="+dir, "TMPDIR="+dir, "TMP="+dir, "TEMP="+dir)
+ 	var out, errBuf bytes.Buffer
+ 	cmd.Stdout, cmd.Stderr = &out, &errBuf
+ 	t.Logf("surface=OS subprocess invocation=%q env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER=%q XDG_CONFIG_HOME=%q", cmd.Args, marker, dir)
+diff --git a/cmd/mayak/check_test.go b/cmd/mayak/check_test.go
+index 79ea7c5..f40b0f4 100644
+--- a/cmd/mayak/check_test.go
++++ b/cmd/mayak/check_test.go
+@@ -16,6 +16,7 @@ import (
+ 	"testing"
+ 	"time"
+ 
++	"github.com/polargoose18/mayak/internal/probe"
+ 	"github.com/polargoose18/mayak/internal/report"
+ 	"github.com/polargoose18/mayak/internal/runner"
+ 	"github.com/polargoose18/mayak/internal/targets"
+@@ -162,14 +163,18 @@ func checkEnv(t *testing.T, m *mockdpi.Env, node *testControl, targetPort uint16
+ 	return runner.Env{
+ 		SystemResolver:  resolverVia(m.ControlDNS),
+ 		ControlResolver: probeDNSServer(mustAddrPort(t, m.ControlDNS)),
+-		Control:         probeControlClient(node.srv.URL, m.CertPool),
+-		ControlTLS:      mustAddrPort(t, m.ControlTLS),
+-		Anchors:         []string{"https://" + m.ControlTLS + "/"},
+-		NeutralSNI:      "neutral.example",
+-		TargetPort:      targetPort,
+-		RootCAs:         m.CertPool,
+-		Clock:           testClock{},
+-		Rand:            zeroRand{},
++		PublicResolvers: []probe.DNSServer{
++			{Addr: mustAddrPort(t, m.ControlDoT), Transport: probe.DNSTransportDoT, ServerName: "localhost"},
++			probeDNSServer(mustAddrPort(t, m.ControlDNS)),
++		},
++		Control:    probeControlClient(node.srv.URL, m.CertPool),
++		ControlTLS: mustAddrPort(t, m.ControlTLS),
++		Anchors:    []string{"https://" + m.ControlTLS + "/"},
++		NeutralSNI: "neutral.example",
++		TargetPort: targetPort,
++		RootCAs:    m.CertPool,
++		Clock:      testClock{},
++		Rand:       zeroRand{},
+ 	}
+ }
+ 
+@@ -187,6 +192,7 @@ func mustAddrPort(t testing.TB, s string) netip.AddrPort {
+ func setup(t *testing.T, opts mockdpi.Config, reachable bool) (runner.Env, string, *testControl) {
+ 	t.Helper()
+ 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
++	t.Setenv("APPDATA", t.TempDir())
+ 	m := mockdpi.Start(t, opts)
+ 	targetPort := portOfTLS(t, m)
+ 	node := newTestControl(t, []string{testHost, "second.example"}, reachable)
+@@ -305,6 +311,7 @@ func TestCheckBadTargetsKind(t *testing.T) {
+ 
+ func TestCheckExpiredList(t *testing.T) {
+ 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
++	t.Setenv("APPDATA", t.TempDir())
+ 	m := mockdpi.Start(t, mockdpi.Config{Control: true, CertNames: []string{testHost}})
+ 	node := newTestControl(t, []string{testHost, "second.example"}, true)
+ 	dir := t.TempDir()
+@@ -383,3 +390,218 @@ func TestCheckAllowlistModeExitZero(t *testing.T) {
+ 		t.Fatalf("stdout = %q", stdout)
+ 	}
+ }
++
++func TestProductionResolvers(t *testing.T) {
++	env := productionEnv()
++	want := []probe.DNSServer{
++		{Addr: netip.MustParseAddrPort("1.1.1.1:853"), Transport: probe.DNSTransportDoT, ServerName: "cloudflare-dns.com"},
++		{Addr: netip.MustParseAddrPort("8.8.8.8:853"), Transport: probe.DNSTransportDoT, ServerName: "dns.google"},
++	}
++	if len(env.PublicResolvers) != len(want) {
++		t.Fatalf("public resolvers = %+v, want %+v", env.PublicResolvers, want)
++	}
++	for i := range want {
++		if env.PublicResolvers[i] != want[i] {
++			t.Errorf("resolver %d = %+v, want %+v", i, env.PublicResolvers[i], want[i])
++		}
++	}
++	if env.ControlResolver.Addr.IsValid() {
++		t.Fatal("undeployed control resolver must remain empty")
++	}
++	t.Logf("production resolvers=%+v; undeployed control resolver=%+v", env.PublicResolvers, env.ControlResolver)
++}
++
++func TestCheckIncompleteEnvGuard(t *testing.T) {
++	for _, field := range []string{"url", "tls", "dns", "public"} {
++		t.Run(field, func(t *testing.T) {
++			env, path, node := setup(t, mockdpi.Config{Control: true}, true)
++			switch field {
++			case "url":
++				env.Control.BaseURL = ""
++			case "tls":
++				env.ControlTLS = netip.AddrPort{}
++			case "dns":
++				env.ControlResolver = probe.DNSServer{}
++			case "public":
++				env.PublicResolvers = env.PublicResolvers[:1]
++			}
++			stdout, stderr, err := runCheckCmd(t, env, "--targets-file", path)
++			if exitCodeOf(t, err) != 2 || stdout != "" || !strings.Contains(stderr, guardNoControl) {
++				t.Fatalf("exit=%d stdout=%q stderr=%q", exitCodeOf(t, err), stdout, stderr)
++			}
++			if node.requests.Load() != 0 {
++				t.Fatal("preflight used the network")
++			}
++			entries, err := os.ReadDir(agentDir(t))
++			if err != nil {
++				t.Fatal(err)
++			}
++			if len(entries) != 0 {
++				t.Fatalf("preflight left state: %v", entries)
++			}
++		})
++	}
++}
++
++type failedOutput struct{}
++
++func (failedOutput) Write([]byte) (int, error) { return 0, errors.New("stdout closed") }
++
++func TestCheckTextWriteError(t *testing.T) {
++	for _, mode := range []string{"normal", "inconclusive", "interrupted"} {
++		t.Run(mode, func(t *testing.T) {
++			env, path, node := setup(t, mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}, true)
++			ctx := context.Background()
++			if mode == "inconclusive" {
++				node.pingStatus = http.StatusServiceUnavailable
++				env.Anchors = []string{node.srv.URL + "/v1/ping"}
++			}
++			if mode == "interrupted" {
++				var cancel context.CancelFunc
++				ctx, cancel = context.WithCancel(ctx)
++				cancel()
++			}
++			cmd := newRootCmd(env)
++			cmd.SetOut(failedOutput{})
++			cmd.SetErr(&bytes.Buffer{})
++			cmd.SetContext(ctx)
++			cmd.SetArgs([]string{"check", "--targets-file", path})
++			t.Logf("surface=in-process CLI invocation=mayak check --targets-file %q mode=%s stdout=failedOutput", path, mode)
++			err := cmd.Execute()
++			if exitCodeOf(t, err) != 1 || !strings.Contains(err.Error(), "stdout closed") {
++				t.Fatalf("error=%v want stdout failure exit 1", err)
++			}
++			t.Logf("exit=1 error=%v", err)
++		})
++	}
++}
++
++func TestCheckMockDPIVerdicts(t *testing.T) {
++	for _, verdict := range []report.Verdict{report.VerdictSNIBlock, report.VerdictDNSTamper, report.VerdictHTTPStub, report.VerdictIPBlock} {
++		t.Run(string(verdict), func(t *testing.T) {
++			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
++			t.Setenv("APPDATA", t.TempDir())
++			cfg := mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}
++			switch verdict {
++			case report.VerdictSNIBlock:
++				cfg.ResetAfterHello = &mockdpi.ResetAfterHelloConfig{BlockedSNI: []string{testHost, "second.example"}}
++			case report.VerdictDNSTamper:
++				cfg.DNSSpoof = &mockdpi.DNSSpoofConfig{Names: []string{testHost}}
++			case report.VerdictHTTPStub:
++				cfg.StubPage = true
++			case report.VerdictIPBlock:
++				cfg.ClosedPort = true
++			}
++			m := mockdpi.Start(t, cfg)
++			node := newTestControl(t, []string{testHost, "second.example"}, true)
++			node.fetchFrom = mustAddrPort(t, m.ControlTLS)
++			node.roots = m.CertPool
++			env := checkEnv(t, m, node, portOfTLS(t, m))
++			switch verdict {
++			case report.VerdictSNIBlock:
++				env.TargetPort = portOf(t, m.ResetAfterHello)
++				env.ControlTLS = mustAddrPort(t, m.ResetAfterHello)
++			case report.VerdictDNSTamper:
++				env.SystemResolver = resolverVia(m.DNSSpoof)
++			case report.VerdictHTTPStub:
++				env.TargetPort = portOf(t, m.StubPageTLS)
++				stub, err := fetchPage(context.Background(), mustAddrPort(t, m.StubPageTLS), testHost, "/", m.CertPool)
++				if err != nil {
++					t.Fatal(err)
++				}
++				env.KnownStubHashes = []string{stub.BodyHash}
++			case report.VerdictIPBlock:
++				env.TargetPort = portOf(t, m.ClosedPort)
++			}
++			pub, priv := testKey(t)
++			env.PublicKeys = []ed25519.PublicKey{pub}
++			path := signedList(t, t.TempDir(), "2026-11-09.1", testNow.Add(24*time.Hour), priv)
++			stdout, stderr, err := runCheckCmd(t, env, "--targets-file", path)
++			if exitCodeOf(t, err) != 0 || stderr != "" || !strings.Contains(stdout, "t1  "+string(verdict)+"  "+verdictSentence[verdict]) || !strings.Contains(stdout, "Summary: 2 checked") || !strings.Contains(stdout, "Nothing was sent.") {
++				t.Fatalf("exit=%d stdout=%q stderr=%q", exitCodeOf(t, err), stdout, stderr)
++			}
++		})
++	}
++}
++
++func TestCheckConcurrentPublication(t *testing.T) {
++	env, _, node := setup(t, mockdpi.Config{Control: true, CertNames: []string{testHost, "second.example"}}, true)
++	pub, priv := testKey(t)
++	env.PublicKeys = []ed25519.PublicKey{pub}
++	newer := signedList(t, t.TempDir(), "2026-11-09.2", testNow.Add(24*time.Hour), priv)
++	older := signedList(t, t.TempDir(), "2026-11-09.1", testNow.Add(24*time.Hour), priv)
++	release := make(chan struct{})
++	defer close(release)
++	clock := &signalGateClock{gateClock: gateClock{parked: make(chan struct{})}, paused: make(chan struct{})}
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	done := make(chan error, 1)
++	// Block only the pause; releasing it completes the newer command normally.
++	env.Clock = &publicationClock{signalGateClock: clock, release: release}
++	go func() { _, _, err := runCheckCtx(t, ctx, env, "--targets-file", newer); done <- err }()
++	select {
++	case <-clock.parked:
++	case <-ctx.Done():
++		t.Fatal("first command did not finish t1")
++	}
++	select {
++	case <-clock.paused:
++	case <-ctx.Done():
++		t.Fatal("first command did not pause")
++	}
++	requests := node.requests.Load()
++	competing := env
++	competing.Clock = testClock{}
++	stdout, stderr, err := runCheckCmd(t, competing, "--targets-file", older)
++	if exitCodeOf(t, err) != 1 || stdout != "" || !strings.Contains(stderr, "check.lock") || !strings.Contains(stderr, "no mayak check process is running") {
++		cancel()
++		<-done
++		t.Fatalf("competing exit=%d stdout=%q stderr=%q", exitCodeOf(t, err), stdout, stderr)
++	}
++	if node.requests.Load() != requests {
++		cancel()
++		<-done
++		t.Fatal("competing command reached network")
++	}
++	release <- struct{}{}
++	if err := <-done; err != nil {
++		t.Fatalf("first command failed: %v", err)
++	}
++	before := map[string]string{}
++	for _, name := range []string{runner.RevFile, runner.RotationFile} {
++		data, err := os.ReadFile(filepath.Join(agentDir(t), name))
++		if err != nil {
++			t.Fatal(err)
++		}
++		before[name] = string(data)
++	}
++	if strings.TrimSpace(before[runner.RevFile]) != "2026-11-09.2" {
++		t.Fatalf("accepted rev=%q", before[runner.RevFile])
++	}
++	_, stderr, err = runCheckCmd(t, competing, "--targets-file", older)
++	if exitCodeOf(t, err) != 1 || !strings.Contains(stderr, "older") {
++		t.Fatalf("rollback not refused: %v %q", err, stderr)
++	}
++	for name, want := range before {
++		data, err := os.ReadFile(filepath.Join(agentDir(t), name))
++		if err != nil || string(data) != want {
++			t.Fatalf("%s changed: %q -> %q err=%v", name, want, data, err)
++		}
++		t.Logf("accepted %s unchanged after rejected competitor and rollback: %q", name, data)
++	}
++	if _, err := os.Stat(filepath.Join(agentDir(t), "check.lock")); !os.IsNotExist(err) {
++		t.Fatalf("lock not released: %v", err)
++	}
++}
++
++type publicationClock struct {
++	*signalGateClock
++	release <-chan struct{}
++}
++
++func (c *publicationClock) After(time.Duration) <-chan time.Time {
++	close(c.paused)
++	ch := make(chan time.Time, 1)
++	go func() { <-c.release; ch <- testNow }()
++	return ch
++}
+diff --git a/cmd/mayak/env.go b/cmd/mayak/env.go
+index c1eef4d..17c29bb 100644
+--- a/cmd/mayak/env.go
++++ b/cmd/mayak/env.go
+@@ -13,12 +13,13 @@ import (
+ 
+ // Compile-time deployment values; see ADR-006.
+ //
+-// Both are empty for now: no control node is deployed yet, so `mayak check`
++// All three are empty for now: no control node is deployed yet, so `mayak check`
+ // refuses to measure (exit 2) until the project ships a build with a real
+-// node. Filling them in is a one-line change here.
++// node. Control DNS is a separate resolver on the control host, not an HTTP endpoint.
+ const (
+ 	defaultControlURL  = ""
+ 	defaultControlAddr = ""
++	defaultControlDNS  = ""
+ )
+ 
+ // productionEnv builds the Env of the real binary: the system resolver, the
+@@ -30,9 +31,13 @@ func productionEnv() runner.Env {
+ 		// use.
+ 		SystemResolver: nil,
+ 
+-		// The control node is the deployed one; both stay zero until a node
++		// The control node is the deployed one; these stay zero until a node
+ 		// exists (see the constants above).
+ 		Control: probe.ControlClient{BaseURL: defaultControlURL},
++		PublicResolvers: []probe.DNSServer{
++			{Addr: netip.MustParseAddrPort("1.1.1.1:853"), Transport: probe.DNSTransportDoT, ServerName: "cloudflare-dns.com"},
++			{Addr: netip.MustParseAddrPort("8.8.8.8:853"), Transport: probe.DNSTransportDoT, ServerName: "dns.google"},
++		},
+ 	}
+ 	if defaultControlAddr != "" {
+ 		ap, err := netip.ParseAddrPort(defaultControlAddr)
+@@ -43,6 +48,13 @@ func productionEnv() runner.Env {
+ 		}
+ 		env.ControlTLS = ap
+ 	}
++	if defaultControlDNS != "" {
++		ap, err := netip.ParseAddrPort(defaultControlDNS)
++		if err != nil {
++			panic(fmt.Sprintf("bad defaultControlDNS %q: %v", defaultControlDNS, err))
++		}
++		env.ControlResolver = probe.DNSServer{Addr: ap, Transport: probe.DNSTransportUDP}
++	}
+ 	env.Anchors = []string{"https://example.com/", "https://www.iana.org/"}
+ 	env.NeutralSNI = "example.net"
+ 	env.Clock = runner.SystemClock{}
+diff --git a/cmd/mayak/smoke_test.go b/cmd/mayak/smoke_test.go
+index adef8a6..a71d7b2 100644
+--- a/cmd/mayak/smoke_test.go
++++ b/cmd/mayak/smoke_test.go
+@@ -74,10 +74,13 @@ func buildBinary(t *testing.T, trusted ...ed25519.PublicKey) string {
+ func runBinary(t *testing.T, bin string, args ...string) (code int, stdout, stderr string) {
+ 	t.Helper()
+ 	home := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
++	t.Setenv("APPDATA", t.TempDir())
+ 	cmd := exec.Command(bin, args...)
+ 	cmd.Env = append(os.Environ(),
+ 		"HOME="+home,
+ 		"XDG_CONFIG_HOME="+filepath.Join(home, ".config"),
++		"APPDATA="+filepath.Join(home, "AppData"),
+ 	)
+ 	var out, errBuf bytes.Buffer
+ 	cmd.Stdout = &out
+@@ -203,9 +206,11 @@ func TestSmokeLeavesNoStateOutsideTemp(t *testing.T) {
+ 	// we can list afterwards and assert nothing appeared in it.
+ 	bin := buildBinary(t)
+ 	home := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
++	t.Setenv("APPDATA", t.TempDir())
+ 	config := filepath.Join(home, ".config")
+ 	cmd := exec.Command(bin, "check", "--limit", "3")
+-	cmd.Env = append(os.Environ(), "HOME="+home, "XDG_CONFIG_HOME="+config)
++	cmd.Env = append(os.Environ(), "HOME="+home, "XDG_CONFIG_HOME="+config, "APPDATA="+config)
+ 	if err := cmd.Run(); err == nil {
+ 		t.Fatal("check --limit 3 should fail")
+ 	}

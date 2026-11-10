@@ -1,0 +1,181 @@
+
+=== VERIFIER FIX VERIFICATION 2026-11-09T15:01:04.100573+00:00 ===
+$ go vet ./cmd/mayak-ctrl
+EXIT 0
+$ go test ./cmd/mayak-ctrl -count=1
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.100s
+EXIT 0
+$ go test ./cmd/mayak-ctrl -count=2 -v
+=== RUN   TestPing
+--- PASS: TestPing (0.00s)
+=== RUN   TestReachTrue
+--- PASS: TestReachTrue (0.00s)
+=== RUN   TestReachFalse
+--- PASS: TestReachFalse (0.00s)
+=== RUN   TestHostNotInList
+--- PASS: TestHostNotInList (0.00s)
+=== RUN   TestRejectIPParam
+--- PASS: TestRejectIPParam (0.00s)
+=== RUN   TestBadPath
+--- PASS: TestBadPath (0.00s)
+=== RUN   TestRateLimit
+--- PASS: TestRateLimit (0.01s)
+=== RUN   TestNoClientAddressInLogs
+--- PASS: TestNoClientAddressInLogs (0.00s)
+=== RUN   TestAnySNIHanderCert
+--- PASS: TestAnySNIHanderCert (0.00s)
+=== RUN   TestAnySNIHanderDisabled
+--- PASS: TestAnySNIHanderDisabled (0.00s)
+=== RUN   TestAnySNIHandshake
+any-SNI TLS certificate sha256 fingerprint: 83d364d88ddbd298bf369eec94ee0249f5162bb7408460ad009edafc5f4da9eb
+--- PASS: TestAnySNIHandshake (0.00s)
+=== RUN   TestFetchTimeout
+--- PASS: TestFetchTimeout (0.03s)
+=== RUN   TestRejectMalformedQuery
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt
+--- PASS: TestRejectMalformedQuery (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt (0.00s)
+=== RUN   TestRateLimitAtCapacity
+--- PASS: TestRateLimitAtCapacity (0.04s)
+=== RUN   TestResolveBogonRefusal
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/
+--- PASS: TestResolveBogonRefusal (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+=== RUN   TestBogonDialGuard
+--- PASS: TestBogonDialGuard (0.00s)
+=== RUN   TestFetchOversizedBody
+--- PASS: TestFetchOversizedBody (0.01s)
+=== RUN   TestSignedTargetsFreshness
+=== RUN   TestSignedTargetsFreshness/fresh
+=== RUN   TestSignedTargetsFreshness/expired
+=== RUN   TestSignedTargetsFreshness/future-invalid
+--- PASS: TestSignedTargetsFreshness (0.00s)
+    --- PASS: TestSignedTargetsFreshness/fresh (0.00s)
+    --- PASS: TestSignedTargetsFreshness/expired (0.00s)
+    --- PASS: TestSignedTargetsFreshness/future-invalid (0.00s)
+=== RUN   TestPing
+--- PASS: TestPing (0.00s)
+=== RUN   TestReachTrue
+--- PASS: TestReachTrue (0.00s)
+=== RUN   TestReachFalse
+--- PASS: TestReachFalse (0.00s)
+=== RUN   TestHostNotInList
+--- PASS: TestHostNotInList (0.00s)
+=== RUN   TestRejectIPParam
+--- PASS: TestRejectIPParam (0.00s)
+=== RUN   TestBadPath
+--- PASS: TestBadPath (0.00s)
+=== RUN   TestRateLimit
+--- PASS: TestRateLimit (0.01s)
+=== RUN   TestNoClientAddressInLogs
+--- PASS: TestNoClientAddressInLogs (0.00s)
+=== RUN   TestAnySNIHanderCert
+--- PASS: TestAnySNIHanderCert (0.00s)
+=== RUN   TestAnySNIHanderDisabled
+--- PASS: TestAnySNIHanderDisabled (0.00s)
+=== RUN   TestAnySNIHandshake
+any-SNI TLS certificate sha256 fingerprint: 7c6ad325653e25979d420f3ccf1194aab9dafdc012b2e937ece9fa83d355e67d
+--- PASS: TestAnySNIHandshake (0.00s)
+=== RUN   TestFetchTimeout
+--- PASS: TestFetchTimeout (0.03s)
+=== RUN   TestRejectMalformedQuery
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt
+--- PASS: TestRejectMalformedQuery (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt (0.00s)
+=== RUN   TestRateLimitAtCapacity
+--- PASS: TestRateLimitAtCapacity (0.04s)
+=== RUN   TestResolveBogonRefusal
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/
+--- PASS: TestResolveBogonRefusal (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+=== RUN   TestBogonDialGuard
+--- PASS: TestBogonDialGuard (0.00s)
+=== RUN   TestFetchOversizedBody
+--- PASS: TestFetchOversizedBody (0.01s)
+=== RUN   TestSignedTargetsFreshness
+=== RUN   TestSignedTargetsFreshness/fresh
+=== RUN   TestSignedTargetsFreshness/expired
+=== RUN   TestSignedTargetsFreshness/future-invalid
+--- PASS: TestSignedTargetsFreshness (0.00s)
+    --- PASS: TestSignedTargetsFreshness/fresh (0.00s)
+    --- PASS: TestSignedTargetsFreshness/expired (0.00s)
+    --- PASS: TestSignedTargetsFreshness/future-invalid (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.199s
+EXIT 0
+$ gofmt -l cmd/mayak-ctrl
+EXIT 0
+$ go build ./cmd/mayak-ctrl
+EXIT 0

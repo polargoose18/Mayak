@@ -1,0 +1,133 @@
+[
+  {
+    "id": "version",
+    "surface": "real CLI",
+    "invocation": {
+      "argv": [
+        "/tmp/mayak",
+        "version"
+      ],
+      "env": {
+        "HOME": "/tmp/task-13-cli-rfaorgr8",
+        "XDG_CONFIG_HOME": "/tmp/task-13-cli-rfaorgr8/xdg",
+        "APPDATA": "/tmp/task-13-cli-rfaorgr8/appdata"
+      }
+    },
+    "exit": 0,
+    "stdout": "dev\n",
+    "stderr": "",
+    "state": {},
+    "verdict": "PASS"
+  },
+  {
+    "id": "invalid-limit",
+    "surface": "real CLI",
+    "invocation": {
+      "argv": [
+        "/tmp/mayak",
+        "check",
+        "--limit",
+        "3"
+      ],
+      "env": {
+        "HOME": "/tmp/task-13-cli-jmjiia54",
+        "XDG_CONFIG_HOME": "/tmp/task-13-cli-jmjiia54/xdg",
+        "APPDATA": "/tmp/task-13-cli-jmjiia54/appdata"
+      }
+    },
+    "exit": 1,
+    "stdout": "",
+    "stderr": "error: --limit must be between 5 and 20, got 3\n",
+    "state": {},
+    "verdict": "PASS"
+  },
+  {
+    "id": "production-guard",
+    "surface": "real CLI",
+    "invocation": {
+      "argv": [
+        "/tmp/mayak",
+        "check",
+        "--limit",
+        "5"
+      ],
+      "env": {
+        "HOME": "/tmp/task-13-cli-9gbo67sm",
+        "XDG_CONFIG_HOME": "/tmp/task-13-cli-9gbo67sm/xdg",
+        "APPDATA": "/tmp/task-13-cli-9gbo67sm/appdata"
+      }
+    },
+    "exit": 2,
+    "stdout": "",
+    "stderr": "mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n",
+    "state": {},
+    "verdict": "PASS"
+  },
+  {
+    "id": "json-guard",
+    "surface": "real CLI",
+    "invocation": {
+      "argv": [
+        "/tmp/mayak",
+        "check",
+        "--json"
+      ],
+      "env": {
+        "HOME": "/tmp/task-13-cli-g4b62w_b",
+        "XDG_CONFIG_HOME": "/tmp/task-13-cli-g4b62w_b/xdg",
+        "APPDATA": "/tmp/task-13-cli-g4b62w_b/appdata"
+      }
+    },
+    "exit": 2,
+    "stdout": "",
+    "stderr": "mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n",
+    "state": {},
+    "verdict": "PASS"
+  },
+  {
+    "id": "existing-lock",
+    "surface": "real CLI",
+    "invocation": {
+      "argv": [
+        "/tmp/mayak",
+        "check"
+      ],
+      "env": {
+        "HOME": "/tmp/task-13-cli-ytfehn0q",
+        "XDG_CONFIG_HOME": "/tmp/task-13-cli-ytfehn0q/xdg",
+        "APPDATA": "/tmp/task-13-cli-ytfehn0q/appdata"
+      }
+    },
+    "exit": 1,
+    "stdout": "",
+    "stderr": "error: mayak check is locked by /tmp/task-13-cli-ytfehn0q/xdg/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n",
+    "state": {
+      "rotation": "7\n",
+      "targets.rev": "2026-11-09.2\n",
+      "check.lock": "QA fixture: pretend active owner\n"
+    },
+    "verdict": "PASS"
+  },
+  {
+    "id": "source-failure",
+    "surface": "real CLI",
+    "invocation": {
+      "argv": [
+        "/tmp/mayak",
+        "check",
+        "--targets-file",
+        "/nonexistent/task-13-targets.signed.json"
+      ],
+      "env": {
+        "HOME": "/tmp/task-13-cli-126oc76c",
+        "XDG_CONFIG_HOME": "/tmp/task-13-cli-126oc76c/xdg",
+        "APPDATA": "/tmp/task-13-cli-126oc76c/appdata"
+      }
+    },
+    "exit": 1,
+    "stdout": "",
+    "stderr": "error: mayak cannot read the targets list /nonexistent/task-13-targets.signed.json. Check the path given with --targets-file.\n",
+    "state": {},
+    "verdict": "PASS"
+  }
+]

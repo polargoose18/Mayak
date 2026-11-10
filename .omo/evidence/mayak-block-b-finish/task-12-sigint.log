@@ -1,0 +1,25 @@
+surface=OS subprocess via Go test binary
+invocation=go test ./cmd/mayak -run TestCheckInterruptSignal -count=1 -v
+=== RUN   TestCheckInterruptSignal
+    check_interrupt_test.go:342: surface=OS subprocess invocation=["/tmp/go-build1841002266/b001/mayak.test" "-test.run=^TestCheckInterruptSignal$" "-test.v"] env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER="/tmp/TestCheckInterruptSignal1274915996/001/signal-ready" XDG_CONFIG_HOME="/tmp/TestCheckInterruptSignal1274915996/001"
+    check_interrupt_test.go:359: marker="t1 complete; pool paused before t2\n"
+    check_interrupt_test.go:371: calling cmd.Process.Signal(os.Interrupt) pid=451467
+    check_interrupt_test.go:380: child test exit=0
+    check_interrupt_test.go:352: child stdout:
+        === RUN   TestCheckInterruptSignal
+            check_interrupt_test.go:309: surface=CLI signal.NotifyContext invocation=mayak check --targets-file "/tmp/TestCheckInterruptSignal1274915996/001/TestCheckInterruptSignal2638212255/002/targets.signed.json" --json
+            check_interrupt_test.go:323: state targets.rev byte-identical: before="2026-11-08.1\n" after="2026-11-08.1\n"
+            check_interrupt_test.go:323: state rotation byte-identical: before="2\n" after="2\n"
+        SIGNAL_CHILD_JSON=[{"schema":"mayak.report/1","report_id":"b0b7cad409","ts":"2026-11-09T12:00:00Z","agent":{"ver":"dev","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"unknown","country":"","region":null},"targets_rev":"2026-11-09.1","results":[{"target":"t1","test":"http","verdict":"ok","evidence":{"anchors_alive":true,"ctrl_alive":true,"dns_control":"ok","dns_system":"ok","external":"reachable","http_hash":"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398","http_result":"responded","http_size":75,"http_status":200,"tcp":"ok","tls_neutral_sni":"cert_invalid","tls_target_sni":"ok","tls_via_control":"ok"}}]}]
+        SIGNAL_CHILD_EXIT=130
+            check_interrupt_test.go:326: stderr=""
+        --- PASS: TestCheckInterruptSignal (0.02s)
+        PASS
+        
+        child stderr:
+--- PASS: TestCheckInterruptSignal (0.02s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak	0.026s
+focused_test_exit=0
+artifact_review=PASS; captured JSON parsed; only t1; state comparisons verified
+cleanup=PASS; child pid 451467 absent; temp directory /tmp/TestCheckInterruptSignal1274915996/001 absent

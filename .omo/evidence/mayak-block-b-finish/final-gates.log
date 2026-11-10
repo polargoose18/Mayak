@@ -1,0 +1,53 @@
+===== make check =====
+$ make check
+go vet ./...
+go test ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	15.447s
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.101s
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	(cached)
+ok  	github.com/polargoose18/mayak/internal/classify	0.080s
+ok  	github.com/polargoose18/mayak/internal/probe	3.591s
+ok  	github.com/polargoose18/mayak/internal/report	(cached)
+ok  	github.com/polargoose18/mayak/internal/runner	2.474s
+ok  	github.com/polargoose18/mayak/internal/targets	(cached)
+ok  	github.com/polargoose18/mayak/targets	(cached)
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	(cached)
+EXIT_CODE=0
+
+===== make sign-check =====
+$ make sign-check
+go test -count=1 -v -run '^TestSignedTargetsFile$' ./internal/targets
+=== RUN   TestSignedTargetsFile
+--- PASS: TestSignedTargetsFile (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/internal/targets	0.003s
+EXIT_CODE=0
+
+===== branch metadata =====
+branch: block-b-wave1
+HEAD: 5078a1d856e21799a8a66b2271299ef023cf0dd8
+status after: ## block-b-wave1
+?? .omo/
+task-15 tracked control-file candidates: 
+===== task-15 branch comparison =====
+$ GIT_MASTER=1 git diff --name-status block-b-wave1..block-b-final-verification
+M	cmd/mayak/check.go
+M	cmd/mayak/check_interrupt_test.go
+M	cmd/mayak/check_test.go
+M	cmd/mayak/env.go
+D	cmd/mayak/hardening_test.go
+M	cmd/mayak/smoke_test.go
+M	internal/classify/classify.go
+D	internal/runner/provenance_test.go
+M	internal/runner/report.go
+M	internal/runner/report_test.go
+M	internal/runner/runner.go
+M	internal/runner/target.go
+M	internal/runner/target_test.go
+$ for ref in block-b-wave1 block-b-final-verification; git ls-tree -r --name-only "$ref" | grep -Ei "control|task.?15"
+[block-b-wave1]
+cmd/mayak/testcontrol_test.go
+internal/probe/control.go
+[block-b-final-verification]
+cmd/mayak/testcontrol_test.go
+internal/probe/control.go

@@ -1,0 +1,21 @@
+source invocation: go test ./cmd/mayak -count=1 -v
+=== RUN   TestSmokeVersion
+    smoke_test.go:142: surface=real binary invocation=["/tmp/TestSmokeVersion1019122810/001/mayak" "version"]
+    smoke_test.go:142: exit=0 stdout="dev\n" stderr=""
+--- PASS: TestSmokeVersion (0.51s)
+=== RUN   TestSmokeExpiredList
+    smoke_test.go:157: surface=real binary invocation=["/tmp/TestSmokeExpiredList2855493667/001/mayak" "check" "--targets-file" "/tmp/TestSmokeExpiredList2855493667/002/targets.signed.json"]
+    smoke_test.go:157: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeExpiredList2855493667/002/targets.signed.json) expired on 2026-11-08. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestSmokeExpiredList (0.73s)
+=== RUN   TestSmokeForeignKeyList
+    smoke_test.go:177: surface=real binary invocation=["/tmp/TestSmokeForeignKeyList4111443586/001/mayak" "check" "--targets-file" "/tmp/TestSmokeForeignKeyList4111443586/002/targets.signed.json"]
+    smoke_test.go:177: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeForeignKeyList4111443586/002/targets.signed.json) is not signed by a key this mayak trusts. Use the list built into mayak or a list from the project.\n"
+--- PASS: TestSmokeForeignKeyList (0.55s)
+=== RUN   TestSmokeLimitOutOfRange
+    smoke_test.go:190: surface=real binary invocation=["/tmp/TestSmokeLimitOutOfRange230122970/001/mayak" "check" "--limit" "3"]
+    smoke_test.go:190: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+--- PASS: TestSmokeLimitOutOfRange (0.53s)
+=== RUN   TestSmokeLeavesNoStateOutsideTemp
+--- PASS: TestSmokeLeavesNoStateOutsideTemp (0.81s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak	4.253s

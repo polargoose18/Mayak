@@ -1,0 +1,355 @@
+SERVER: ./mayak-ctrl --addr 127.0.0.1:18443 --tls-addr 127.0.0.1:18444 --targets targets/targets.signed.json
+$ openssl s_client -connect 127.0.0.1:18444 -servername target.example < /dev/null
+Connecting to 127.0.0.1
+depth=0 CN=Mayak Control Node (ephemeral)
+verify error:num=18:self-signed certificate
+verify return:1
+depth=0 CN=Mayak Control Node (ephemeral)
+verify return:1
+CONNECTED(00000003)
+---
+Certificate chain
+ 0 s:CN=Mayak Control Node (ephemeral)
+   i:CN=Mayak Control Node (ephemeral)
+   a:PKEY: EC, (prime256v1); sigalg: ecdsa-with-SHA256
+   v:NotBefore: Nov  9 13:44:17 2026 GMT; NotAfter: Nov 10 14:44:17 2026 GMT
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+MIIBfTCCASOgAwIBAgIIaa4jeBhEJX0wCgYIKoZIzj0EAwIwKTEnMCUGA1UEAxMe
+TWF5YWsgQ29udHJvbCBOb2RlIChlcGhlbWVyYWwpMB4XDTI2MTEwOTEzNDQxN1oX
+DTI2MTExMDE0NDQxN1owKTEnMCUGA1UEAxMeTWF5YWsgQ29udHJvbCBOb2RlIChl
+cGhlbWVyYWwpMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErtVbDF+AcrkdZ73r
+vILrzsqA56PVnv/chGnvfmojHcVgtqIo0Zsk5h3aC3aFyu71q6mDXa6D+8ZYGirX
+VYg8gaM1MDMwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMAwG
+A1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDSAAwRQIgGmvjnx3/EyWdkpC3pSVGci2C
+irhCc0d1Tou57x7UmYsCIQDw4LS44aGciXa2oQYqKEGg4H989dIOAUPJwtYhdB58
+Qw==
+-----END CERTIFICATE-----
+subject=CN=Mayak Control Node (ephemeral)
+issuer=CN=Mayak Control Node (ephemeral)
+---
+No client certificate CA names sent
+Peer signing digest: SHA256
+Peer signature type: ecdsa_secp256r1_sha256
+Negotiated TLS1.3 group: X25519MLKEM768
+---
+SSL handshake has read 1832 bytes and written 1620 bytes
+Verification error: self-signed certificate
+---
+New, TLSv1.3, Cipher is TLS_AES_128_GCM_SHA256
+Protocol: TLSv1.3
+Server public key is 256 bit
+This TLS version forbids renegotiation.
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+Early data was not sent
+Verify return code: 18 (self-signed certificate)
+---
+---
+Post-Handshake New Session Ticket arrived:
+SSL-Session:
+    Protocol  : TLSv1.3
+    Cipher    : TLS_AES_128_GCM_SHA256
+    Session-ID: B4D9CD43568E7C49406E55FDA7FEBC32B9460E229D89D8576BDF93F411F21ECF
+    Session-ID-ctx: 
+    Resumption PSK: 45814FADC1BE5BBB7541E63D2DC948B3700540BE95B8E2452EFF9C75CCB0DB14
+    PSK identity: None
+    PSK identity hint: None
+    SRP username: None
+    TLS session ticket lifetime hint: 604800 (seconds)
+    TLS session ticket:
+    0000 - 92 05 c4 34 d9 cd dc 3a-9a 1f 89 5f c0 3b 8a 2f   ...4...:..._.;./
+    0010 - 25 18 56 26 11 4b 63 be-0f 72 06 72 45 2e da ea   %.V&.Kc..r.rE...
+    0020 - bd 0b 83 7e c9 d0 b7 ec-db 27 90 77 79 2a 7f 21   ...~.....'.wy*.!
+    0030 - 0d e5 8a 7b 44 56 fd 91-2a 1f 54 5c 30 ec 3d 31   ...{DV..*.T\0.=1
+    0040 - 62 98 43 75 1f 43 ce da-d2 a9 3e 84 5f 80 10 ac   b.Cu.C....>._...
+    0050 - 0f 76 ba de 4b a9 c0 81-46 b7 0c 88 0a 7c a6 a9   .v..K...F....|..
+    0060 - 2d 84 bf 0c e6 02 1b 3a-88                        -......:.
+
+    Start Time: 1794235457
+    Timeout   : 7200 (sec)
+    Verify return code: 18 (self-signed certificate)
+    Extended master secret: no
+    Max Early Data: 0
+---
+read R BLOCK
+closed
+
+EXIT 0
+
+SERVER LOG:
+any-SNI TLS certificate sha256 fingerprint: 7e2232e2fbadb379484b4093116988640e7f246658593aa6994f4788596d678e
+
+PRIVACY: PASS; searched server log for 127.0.0.1 and 10.0.0.1
+CLEANUP: terminated PID 402690; exit -15
+CLEANUP: both ports refuse connections
+
+=== VERIFIER FIX VERIFICATION 2026-11-09T15:01:04.100573+00:00 ===
+$ go vet ./cmd/mayak-ctrl
+EXIT 0
+$ go test ./cmd/mayak-ctrl -count=1
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.100s
+EXIT 0
+$ go test ./cmd/mayak-ctrl -count=2 -v
+=== RUN   TestPing
+--- PASS: TestPing (0.00s)
+=== RUN   TestReachTrue
+--- PASS: TestReachTrue (0.00s)
+=== RUN   TestReachFalse
+--- PASS: TestReachFalse (0.00s)
+=== RUN   TestHostNotInList
+--- PASS: TestHostNotInList (0.00s)
+=== RUN   TestRejectIPParam
+--- PASS: TestRejectIPParam (0.00s)
+=== RUN   TestBadPath
+--- PASS: TestBadPath (0.00s)
+=== RUN   TestRateLimit
+--- PASS: TestRateLimit (0.01s)
+=== RUN   TestNoClientAddressInLogs
+--- PASS: TestNoClientAddressInLogs (0.00s)
+=== RUN   TestAnySNIHanderCert
+--- PASS: TestAnySNIHanderCert (0.00s)
+=== RUN   TestAnySNIHanderDisabled
+--- PASS: TestAnySNIHanderDisabled (0.00s)
+=== RUN   TestAnySNIHandshake
+any-SNI TLS certificate sha256 fingerprint: 83d364d88ddbd298bf369eec94ee0249f5162bb7408460ad009edafc5f4da9eb
+--- PASS: TestAnySNIHandshake (0.00s)
+=== RUN   TestFetchTimeout
+--- PASS: TestFetchTimeout (0.03s)
+=== RUN   TestRejectMalformedQuery
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt
+--- PASS: TestRejectMalformedQuery (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt (0.00s)
+=== RUN   TestRateLimitAtCapacity
+--- PASS: TestRateLimitAtCapacity (0.04s)
+=== RUN   TestResolveBogonRefusal
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/
+--- PASS: TestResolveBogonRefusal (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+=== RUN   TestBogonDialGuard
+--- PASS: TestBogonDialGuard (0.00s)
+=== RUN   TestFetchOversizedBody
+--- PASS: TestFetchOversizedBody (0.01s)
+=== RUN   TestSignedTargetsFreshness
+=== RUN   TestSignedTargetsFreshness/fresh
+=== RUN   TestSignedTargetsFreshness/expired
+=== RUN   TestSignedTargetsFreshness/future-invalid
+--- PASS: TestSignedTargetsFreshness (0.00s)
+    --- PASS: TestSignedTargetsFreshness/fresh (0.00s)
+    --- PASS: TestSignedTargetsFreshness/expired (0.00s)
+    --- PASS: TestSignedTargetsFreshness/future-invalid (0.00s)
+=== RUN   TestPing
+--- PASS: TestPing (0.00s)
+=== RUN   TestReachTrue
+--- PASS: TestReachTrue (0.00s)
+=== RUN   TestReachFalse
+--- PASS: TestReachFalse (0.00s)
+=== RUN   TestHostNotInList
+--- PASS: TestHostNotInList (0.00s)
+=== RUN   TestRejectIPParam
+--- PASS: TestRejectIPParam (0.00s)
+=== RUN   TestBadPath
+--- PASS: TestBadPath (0.00s)
+=== RUN   TestRateLimit
+--- PASS: TestRateLimit (0.01s)
+=== RUN   TestNoClientAddressInLogs
+--- PASS: TestNoClientAddressInLogs (0.00s)
+=== RUN   TestAnySNIHanderCert
+--- PASS: TestAnySNIHanderCert (0.00s)
+=== RUN   TestAnySNIHanderDisabled
+--- PASS: TestAnySNIHanderDisabled (0.00s)
+=== RUN   TestAnySNIHandshake
+any-SNI TLS certificate sha256 fingerprint: 7c6ad325653e25979d420f3ccf1194aab9dafdc012b2e937ece9fa83d355e67d
+--- PASS: TestAnySNIHandshake (0.00s)
+=== RUN   TestFetchTimeout
+--- PASS: TestFetchTimeout (0.03s)
+=== RUN   TestRejectMalformedQuery
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid
+=== RUN   TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt
+--- PASS: TestRejectMalformedQuery (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/reach?host=example.org&path=/robots.txt (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&ip=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&port=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=%ZZ (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&host=evil.invalid (0.00s)
+    --- PASS: TestRejectMalformedQuery//v1/fetch?host=example.org&path=/&path=/robots.txt (0.00s)
+=== RUN   TestRateLimitAtCapacity
+--- PASS: TestRateLimitAtCapacity (0.04s)
+=== RUN   TestResolveBogonRefusal
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org
+=== RUN   TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/
+--- PASS: TestResolveBogonRefusal (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[127.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[::ffff:192.168.1.1]/v1/fetch?host=example.org&path=/ (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/reach?host=example.org (0.00s)
+    --- PASS: TestResolveBogonRefusal/[1.1.1.1_10.0.0.1]/v1/fetch?host=example.org&path=/ (0.00s)
+=== RUN   TestBogonDialGuard
+--- PASS: TestBogonDialGuard (0.00s)
+=== RUN   TestFetchOversizedBody
+--- PASS: TestFetchOversizedBody (0.01s)
+=== RUN   TestSignedTargetsFreshness
+=== RUN   TestSignedTargetsFreshness/fresh
+=== RUN   TestSignedTargetsFreshness/expired
+=== RUN   TestSignedTargetsFreshness/future-invalid
+--- PASS: TestSignedTargetsFreshness (0.00s)
+    --- PASS: TestSignedTargetsFreshness/fresh (0.00s)
+    --- PASS: TestSignedTargetsFreshness/expired (0.00s)
+    --- PASS: TestSignedTargetsFreshness/future-invalid (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	0.199s
+EXIT 0
+$ gofmt -l cmd/mayak-ctrl
+EXIT 0
+$ go build ./cmd/mayak-ctrl
+EXIT 0
+
+=== POST-FIX ANY-SNI BINARY SCENARIO ===
+SERVER: ./mayak-ctrl --addr 127.0.0.1:18443 --tls-addr 127.0.0.1:18444 --targets targets/targets.signed.json
+$ openssl s_client -connect 127.0.0.1:18444 -servername target.example < /dev/null
+Connecting to 127.0.0.1
+depth=0 CN=Mayak Control Node (ephemeral)
+verify error:num=18:self-signed certificate
+verify return:1
+depth=0 CN=Mayak Control Node (ephemeral)
+verify return:1
+CONNECTED(00000003)
+---
+Certificate chain
+ 0 s:CN=Mayak Control Node (ephemeral)
+   i:CN=Mayak Control Node (ephemeral)
+   a:PKEY: EC, (prime256v1); sigalg: ecdsa-with-SHA256
+   v:NotBefore: Nov  9 14:01:58 2026 GMT; NotAfter: Nov 10 15:01:58 2026 GMT
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+MIIBfTCCASOgAwIBAgIICZ3l/9GrLRUwCgYIKoZIzj0EAwIwKTEnMCUGA1UEAxMe
+TWF5YWsgQ29udHJvbCBOb2RlIChlcGhlbWVyYWwpMB4XDTI2MTEwOTE0MDE1OFoX
+DTI2MTExMDE1MDE1OFowKTEnMCUGA1UEAxMeTWF5YWsgQ29udHJvbCBOb2RlIChl
+cGhlbWVyYWwpMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEseB/PDHTMkBy+5SE
+ysuz1Nytf+61OoYW/tgu6acmVznbxsx1lbIodektv7iSYAWkmv4k3K/+ukNdP72g
+Pzp106M1MDMwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMAwG
+A1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDSAAwRQIgdl6c8P3hkCcYbkVul3djbRuj
+5H1tx2g4z9MOQf0YCHUCIQDoPTVwzg2hpFXXdKKW4OrcGIvRwRLSbbam5AhIaVwe
+nQ==
+-----END CERTIFICATE-----
+subject=CN=Mayak Control Node (ephemeral)
+issuer=CN=Mayak Control Node (ephemeral)
+---
+No client certificate CA names sent
+Peer signing digest: SHA256
+Peer signature type: ecdsa_secp256r1_sha256
+Negotiated TLS1.3 group: X25519MLKEM768
+---
+SSL handshake has read 1832 bytes and written 1620 bytes
+Verification error: self-signed certificate
+---
+New, TLSv1.3, Cipher is TLS_AES_128_GCM_SHA256
+Protocol: TLSv1.3
+Server public key is 256 bit
+This TLS version forbids renegotiation.
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+Early data was not sent
+Verify return code: 18 (self-signed certificate)
+---
+---
+Post-Handshake New Session Ticket arrived:
+SSL-Session:
+    Protocol  : TLSv1.3
+    Cipher    : TLS_AES_128_GCM_SHA256
+    Session-ID: 10AB78BBC92284B2E12B11258D3F8E0B5E2373DEDB00262E70439FF00DD59D08
+    Session-ID-ctx: 
+    Resumption PSK: 7D55367749F10177DF999A1C757F803087A66304DC2E910DE093DC3C7722093D
+    PSK identity: None
+    PSK identity hint: None
+    SRP username: None
+    TLS session ticket lifetime hint: 604800 (seconds)
+    TLS session ticket:
+    0000 - cc 82 68 f6 dd 97 fa 21-02 1a fb b7 6e 89 56 8b   ..h....!....n.V.
+    0010 - af 03 b9 d6 6a c8 d7 77-25 93 19 3a 39 93 bd cb   ....j..w%..:9...
+    0020 - 7f 55 46 92 c8 2e 6e 62-01 4d 77 ee 94 f6 dc 98   .UF...nb.Mw.....
+    0030 - 9e 8e ce 5b 0b f9 75 3c-80 3b 33 88 90 99 c1 5a   ...[..u<.;3....Z
+    0040 - ad 70 64 76 6a 79 87 1c-31 06 00 c1 9b 30 e7 75   .pdvjy..1....0.u
+    0050 - 07 1d 24 0b 34 42 55 c4-f7 88 cf 45 bd 7d 3a 58   ..$.4BU....E.}:X
+    0060 - 4a 05 68 5a 65 34 88 02-39                        J.hZe4..9
+
+    Start Time: 1794236529
+    Timeout   : 7200 (sec)
+    Verify return code: 18 (self-signed certificate)
+    Extended master secret: no
+    Max Early Data: 0
+---
+read R BLOCK
+closed
+
+EXIT 0
+
+SERVER OUTPUT:
+any-SNI TLS certificate sha256 fingerprint: 75ebf761d5d5609dce8d2af34ed4ff31996170b26705a2e4e5d027e075d38c66
+PRIVACY: PASS; searched server output for client IPs and SNI/host values.
+CLEANUP: PID 431662 exited -15; ports 18443 and 18444 closed=True

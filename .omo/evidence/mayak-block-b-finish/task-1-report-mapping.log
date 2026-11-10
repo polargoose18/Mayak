@@ -1,0 +1,123 @@
+# Manual QA — task 1: Map one run to a mayak.report/1 document
+Worktree: /home/goose/Documents/Mayak-wt/block-b-wave1
+Date: 2026-11-09T11:09:44Z
+
+## 1. Targeted tests
+$ go test ./internal/runner -run 'TestBuildReport|TestOSName|TestIPVersion' -count=1 -v
+=== RUN   TestBuildReport
+=== RUN   TestBuildReport/ok
+=== RUN   TestBuildReport/dns_tamper
+=== RUN   TestBuildReport/timeout_unknown
+=== RUN   TestBuildReport/ip_block
+=== RUN   TestBuildReport/vendor_down
+=== RUN   TestBuildReport/sni_block
+=== RUN   TestBuildReport/tls_intercept
+=== RUN   TestBuildReport/http_stub
+=== RUN   TestBuildReport/vendor_geoblock
+=== RUN   TestBuildReport/quic_block
+=== RUN   TestBuildReport/inconclusive
+=== RUN   TestBuildReport/allowlist_mode
+=== RUN   TestBuildReport/freeze_after_n
+=== RUN   TestBuildReport/throttled
+--- PASS: TestBuildReport (0.00s)
+=== RUN   TestBuildReportOmitsZeroEvidence
+--- PASS: TestBuildReportOmitsZeroEvidence (0.00s)
+=== RUN   TestBuildReportUnknownVerdict
+--- PASS: TestBuildReportUnknownVerdict (0.00s)
+=== RUN   TestBuildReportTooLarge
+--- PASS: TestBuildReportTooLarge (0.00s)
+=== RUN   TestOSName
+=== RUN   TestOSName/linux
+=== RUN   TestOSName/windows
+=== RUN   TestOSName/darwin
+=== RUN   TestOSName/android
+=== RUN   TestOSName/ios
+=== RUN   TestOSName/freebsd
+=== RUN   TestOSName/#00
+--- PASS: TestOSName (0.00s)
+=== RUN   TestIPVersion
+=== RUN   TestIPVersion/ipv4_from_trusted_addr
+=== RUN   TestIPVersion/ipv6_from_trusted_addr
+=== RUN   TestIPVersion/no_trusted_addr_defaults_to_4
+=== RUN   TestIPVersion/empty_results_defaults_to_4
+--- PASS: TestIPVersion (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/internal/runner	0.004s
+
+## 2. Full test suite
+$ go test ./... -count=1
+ok  	github.com/polargoose18/mayak/cmd/mayak	0.002s
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	0.018s
+ok  	github.com/polargoose18/mayak/internal/classify	0.083s
+ok  	github.com/polargoose18/mayak/internal/probe	3.582s
+ok  	github.com/polargoose18/mayak/internal/report	0.030s
+ok  	github.com/polargoose18/mayak/internal/runner	2.452s
+ok  	github.com/polargoose18/mayak/internal/targets	0.032s
+ok  	github.com/polargoose18/mayak/targets	0.004s
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	0.455s
+exit=0
+
+## 3. make check
+$ make check
+go vet ./...
+go test ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	(cached)
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	(cached)
+ok  	github.com/polargoose18/mayak/internal/classify	(cached)
+ok  	github.com/polargoose18/mayak/internal/probe	(cached)
+ok  	github.com/polargoose18/mayak/internal/report	(cached)
+ok  	github.com/polargoose18/mayak/internal/runner	(cached)
+ok  	github.com/polargoose18/mayak/internal/targets	(cached)
+ok  	github.com/polargoose18/mayak/targets	(cached)
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	(cached)
+exit=0
+
+## 4. Emitted document + report.Validate
+QA test TestQADump builds a report from a sni_block run and calls report.Validate:
+=== RUN   TestQADump
+    qa_dump_test.go:35: DOCUMENT:
+        {
+          "schema": "mayak.report/1",
+          "report_id": "7a21136542",
+          "ts": "2026-01-01T12:00:00Z",
+          "agent": {
+            "ver": "1.0",
+            "os": "linux",
+            "source": "cli"
+          },
+          "net": {
+            "ip_ver": 4,
+            "resolver": "isp",
+            "country": "",
+            "region": null
+          },
+          "targets_rev": "2026-01-01.1",
+          "results": [
+            {
+              "target": "test-target",
+              "test": "tls_sni",
+              "verdict": "sni_block",
+              "evidence": {
+                "anchors_alive": true,
+                "ctrl_alive": true,
+                "dns_control": "ok",
+                "dns_system": "ok",
+                "external": "reachable",
+                "http_hash": "abc123",
+                "http_result": "responded",
+                "http_size": 1024,
+                "http_status": 200,
+                "ms": 100,
+                "tcp": "ok",
+                "tls_neutral_sni": "ok",
+                "tls_target_sni": "reset_after_hello",
+                "tls_via_control": "ok"
+              }
+            }
+          ]
+        }
+    qa_dump_test.go:40: report.Validate: PASS
+    qa_dump_test.go:42: unknown verdict err: build report: invalid report: unknown verdict (wraps ErrInvalid: true)
+--- PASS: TestQADump (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/internal/runner	0.003s

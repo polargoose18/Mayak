@@ -1,0 +1,23 @@
+Task 16: Set the control-node request budget
+Status: BLOCKED by task 15 [~]; this artifact records the gap, not a passing Manual-QA run.
+
+Owner direction:
+  "Continue the work to completion on your best judgment; do not ask this question again this turn."
+  Selected recommendation: 120 requests/minute per privacy-preserving client prefix, with bounded burst.
+  Decision is recorded in .omo/ulw-execute/ledger.jsonl.
+
+Current evidence:
+  .omo/evidence/mayak-block-b-finish/15-code-review.md reports that task 15 kept
+  rateLimitBucketSize=20 and rateLimitWindow=1 minute unchanged.
+  Task 15 is marked [~] because its four-hour checkpoint limit elapsed before
+  integration. Task 16 depends on that control-node package change and therefore
+  was not edited or tested.
+
+Manual-QA acceptance not performed:
+  - No synthetic 20-target run issuing 60 control API requests was executed.
+  - No 121st-request HTTP 429 assertion was executed for a 120/minute cap.
+  - No new prefix-key privacy assertion was executed for the chosen cap.
+
+Gap:
+  The implementation remains at 20 requests/minute and can throttle the supported
+  20-target run. Reopen only in a later authorized plan after task 15 is integrated.

@@ -1,0 +1,17 @@
+source invocation: go test ./cmd/mayak -count=1 -v
+=== RUN   TestCheckInterruptMidRun
+    check_interrupt_test.go:89: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptMidRun2693984906/002/targets.signed.json" "--json"]
+    check_interrupt_test.go:89: exit=130 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"0ae1f81ea3\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    check_interrupt_test.go:122: state before: rev="2026-11-08.1\n" rotation="2\n"; after: rev="2026-11-08.1\n" rotation="2\n"
+--- PASS: TestCheckInterruptMidRun (0.01s)
+=== RUN   TestCheckInterruptText
+    check_interrupt_test.go:131: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText3361211007/002/targets.signed.json"]
+    check_interrupt_test.go:131: exit=130 stdout="t1  ok  The site opened normally.\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+--- PASS: TestCheckInterruptText (0.01s)
+=== RUN   TestCheckInterruptBeforeStart
+    check_interrupt_test.go:159: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1055815657/002/targets.signed.json"]
+    check_interrupt_test.go:159: exit=130 stdout="Summary: 0 checked\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+    check_interrupt_test.go:170: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1055815657/002/targets.signed.json" "--json"]
+    check_interrupt_test.go:170: exit=130 stdout="" stderr=""
+    check_interrupt_test.go:189: cancelled before start: no state files or staging directories remain
+--- PASS: TestCheckInterruptBeforeStart (0.00s)

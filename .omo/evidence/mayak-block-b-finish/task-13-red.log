@@ -1,0 +1,32 @@
+--- FAIL: TestCheckInterruptText (0.01s)
+    check_interrupt_test.go:136: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText2980861305/003/targets.signed.json"]
+    check_interrupt_test.go:136: exit=130 stdout="t1  ok  The site opened normally.\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+    check_interrupt_test.go:144: stdout = "t1  ok  The site opened normally.\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n", want an explicit unmeasured target row
+--- FAIL: TestProductionResolvers (0.00s)
+    check_test.go:401: public resolvers = [], want [{Addr:1.1.1.1:853 Transport:dot ServerName:cloudflare-dns.com} {Addr:8.8.8.8:853 Transport:dot ServerName:dns.google}]
+--- FAIL: TestCheckIncompleteEnvGuard (0.66s)
+    --- FAIL: TestCheckIncompleteEnvGuard/tls (0.22s)
+        check_test.go:417: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardtls2127153395/003/targets.signed.json"]
+        check_test.go:417: exit=0 stdout="t1    The result could not be interpreted.\nt2    The result could not be interpreted.\nSummary: 2 checked\nNothing was sent.\n" stderr=""
+        check_test.go:418: exit=0 stdout="t1    The result could not be interpreted.\nt2    The result could not be interpreted.\nSummary: 2 checked\nNothing was sent.\n" stderr=""
+    --- FAIL: TestCheckIncompleteEnvGuard/dns (0.21s)
+        check_test.go:417: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuarddns2640905229/003/targets.signed.json"]
+        check_test.go:417: exit=0 stdout="t1    The result could not be interpreted.\nt2    The result could not be interpreted.\nSummary: 2 checked\nNothing was sent.\n" stderr=""
+        check_test.go:418: exit=0 stdout="t1    The result could not be interpreted.\nt2    The result could not be interpreted.\nSummary: 2 checked\nNothing was sent.\n" stderr=""
+    --- FAIL: TestCheckIncompleteEnvGuard/public (0.23s)
+        check_test.go:417: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardpublic343037368/003/targets.signed.json"]
+        check_test.go:417: exit=0 stdout="t1  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nt2  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nSummary: 2 checked, tls_intercept 2\nNothing was sent.\n" stderr=""
+        check_test.go:418: exit=0 stdout="t1  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nt2  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nSummary: 2 checked, tls_intercept 2\nNothing was sent.\n" stderr=""
+--- FAIL: TestCheckTextWriteError (0.45s)
+    --- FAIL: TestCheckTextWriteError/normal (0.24s)
+        check_test.go:436: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrornormal452220564/003/targets.signed.json" mode=normal stdout=failedOutput
+        check_test.go:438: error=<nil> want stdout failure exit 1
+    --- FAIL: TestCheckTextWriteError/inconclusive (0.21s)
+        check_test.go:436: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinconclusive1026003060/003/targets.signed.json" mode=inconclusive stdout=failedOutput
+        check_test.go:438: error=exit status 2 want stdout failure exit 1
+    --- FAIL: TestCheckTextWriteError/interrupted (0.01s)
+        check_test.go:436: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinterrupted689042931/003/targets.signed.json" mode=interrupted stdout=failedOutput
+        check_test.go:438: error=interrupted want stdout failure exit 1
+FAIL
+FAIL	github.com/polargoose18/mayak/cmd/mayak	1.130s
+FAIL

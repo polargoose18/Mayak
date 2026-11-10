@@ -1,0 +1,1 @@
+error: mayak cannot read the targets list /nonexistent/task-13-targets.signed.json. Check the path given with --targets-file.

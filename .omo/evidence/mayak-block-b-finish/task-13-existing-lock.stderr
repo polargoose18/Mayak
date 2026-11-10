@@ -1,0 +1,1 @@
+error: mayak check is locked by /tmp/task-13-cli-ytfehn0q/xdg/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running

@@ -1,0 +1,1 @@
+mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.

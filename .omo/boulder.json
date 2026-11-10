@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "active_work_id": "mayak-block-b-finish",
+  "works": {
+    "mayak-block-b-finish": {
+      "work_id": "mayak-block-b-finish",
+      "active_plan": ".omo/plans/mayak-block-b-finish.md",
+      "plan_name": "mayak-block-b-finish",
+      "session_ids": [
+        "senpi:01a1bfc4-49aa-71ab-b632-d93ba6574f16"
+      ],
+      "status": "completed",
+      "worktree_path": "/home/goose/Documents/Mayak-wt/block-b-wave1"
+    }
+  }
+}

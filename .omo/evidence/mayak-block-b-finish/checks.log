@@ -1,0 +1,6 @@
+$ go vet ./cmd/mayak
+vet exit=0
+$ go test ./cmd/mayak -count=2
+ok  	github.com/polargoose18/mayak/cmd/mayak	8.541s
+$ go build -o /tmp/mayak ./cmd/mayak
+build exit=0

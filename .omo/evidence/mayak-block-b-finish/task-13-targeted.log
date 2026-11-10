@@ -1,0 +1,69 @@
+=== RUN   TestCheckInterruptText
+    check_interrupt_test.go:136: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText3904815179/003/targets.signed.json"]
+    check_interrupt_test.go:136: exit=130 stdout="t1  ok  The site opened normally.\nt2  not measured\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+--- PASS: TestCheckInterruptText (0.01s)
+=== RUN   TestProductionResolvers
+    check_test.go:411: production resolvers=[{Addr:1.1.1.1:853 Transport:dot ServerName:cloudflare-dns.com} {Addr:8.8.8.8:853 Transport:dot ServerName:dns.google}]; undeployed control resolver={Addr:invalid AddrPort Transport: ServerName:}
+--- PASS: TestProductionResolvers (0.00s)
+=== RUN   TestCheckIncompleteEnvGuard
+=== RUN   TestCheckIncompleteEnvGuard/url
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardurl4164298662/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/tls
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardtls202322374/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/dns
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuarddns1895351599/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/public
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardpublic4277133532/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckIncompleteEnvGuard (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/url (0.00s)
+    --- PASS: TestCheckIncompleteEnvGuard/tls (0.00s)
+    --- PASS: TestCheckIncompleteEnvGuard/dns (0.00s)
+    --- PASS: TestCheckIncompleteEnvGuard/public (0.00s)
+=== RUN   TestCheckTextWriteError
+=== RUN   TestCheckTextWriteError/normal
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrornormal108736640/003/targets.signed.json" mode=normal stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/inconclusive
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinconclusive2439602717/003/targets.signed.json" mode=inconclusive stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/interrupted
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinterrupted147264432/003/targets.signed.json" mode=interrupted stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+--- PASS: TestCheckTextWriteError (0.42s)
+    --- PASS: TestCheckTextWriteError/normal (0.22s)
+    --- PASS: TestCheckTextWriteError/inconclusive (0.20s)
+    --- PASS: TestCheckTextWriteError/interrupted (0.00s)
+=== RUN   TestCheckMockDPIVerdicts
+=== RUN   TestCheckMockDPIVerdicts/sni_block
+    check_test.go:520: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictssni_block1658699096/004/targets.signed.json"]
+    check_test.go:520: exit=0 stdout="t1  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nt2  timeout_unknown  The site never answered, so the reason could not be determined.\nSummary: 2 checked, sni_block 1, timeout_unknown 1\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/dns_tamper
+    check_test.go:520: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsdns_tamper2895825554/004/targets.signed.json"]
+    check_test.go:520: exit=0 stdout="t1  dns_tamper  The DNS answer looks forged: the address is not a real one for this site.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 1, dns_tamper 1\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/http_stub
+    check_test.go:520: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictshttp_stub1682459828/004/targets.signed.json"]
+    check_test.go:520: exit=0 stdout="t1  http_stub  The site answers with a known block page instead of its real content.\nt2  http_stub  The site answers with a known block page instead of its real content.\nSummary: 2 checked, http_stub 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/ip_block
+    check_test.go:520: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsip_block3263165273/004/targets.signed.json"]
+    check_test.go:520: exit=0 stdout="t1  ip_block  The site's address refuses connections, which looks like an IP block.\nt2  ip_block  The site's address refuses connections, which looks like an IP block.\nSummary: 2 checked, ip_block 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckMockDPIVerdicts (8.91s)
+    --- PASS: TestCheckMockDPIVerdicts/sni_block (8.21s)
+    --- PASS: TestCheckMockDPIVerdicts/dns_tamper (0.24s)
+    --- PASS: TestCheckMockDPIVerdicts/http_stub (0.25s)
+    --- PASS: TestCheckMockDPIVerdicts/ip_block (0.22s)
+=== RUN   TestCheckConcurrentPublication
+    check_test.go:543: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3080299848/004/targets.signed.json"]
+    check_test.go:557: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3080299848/005/targets.signed.json"]
+    check_test.go:557: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckConcurrentPublication3080299848/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    check_test.go:543: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    check_test.go:583: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3080299848/005/targets.signed.json"]
+    check_test.go:583: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckConcurrentPublication3080299848/005/targets.signed.json) has version 2026-11-09.1, which is older than version 2026-11-09.2 that mayak has already accepted. An older list is refused. Update mayak or pass the newer signed list with --targets-file.\n"
+    check_test.go:592: accepted targets.rev unchanged after rejected competitor and rollback: "2026-11-09.2\n"
+    check_test.go:592: accepted rotation unchanged after rejected competitor and rollback: "0\n"
+--- PASS: TestCheckConcurrentPublication (0.05s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak	9.409s

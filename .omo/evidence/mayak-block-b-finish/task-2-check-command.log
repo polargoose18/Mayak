@@ -1,0 +1,52 @@
+Temporary environment: {"HOME": "/tmp/mayak-manual-qa-_tg3k7uh", "XDG_CONFIG_HOME": "/tmp/mayak-manual-qa-_tg3k7uh/.config", "XDG_CACHE_HOME": "/tmp/mayak-manual-qa-_tg3k7uh/.cache", "XDG_DATA_HOME": "/tmp/mayak-manual-qa-_tg3k7uh/.local/share"}
+surface=real CLI scenario=version invocation=["/tmp/mayak", "version"]
+stdout (4 bytes):
+dev
+
+stderr (0 bytes):
+
+exit=0
+PASS version
+surface=real CLI scenario=no-control invocation=["strace", "-f", "-e", "trace=network", "-o", "/home/goose/Documents/Mayak-wt/block-b-wave1/.omo/evidence/mayak-block-b-finish/no-control-network.strace", "/tmp/mayak", "check"]
+stdout (0 bytes):
+
+stderr (104 bytes):
+mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent.
+
+exit=2
+network trace: no network syscalls
+PASS no-control
+surface=real CLI scenario=limit-3 invocation=["/tmp/mayak", "check", "--limit", "3"]
+stdout (0 bytes):
+
+stderr (47 bytes):
+error: --limit must be between 5 and 20, got 3
+
+exit=1
+PASS limit-3
+surface=real CLI scenario=json-no-control invocation=["/tmp/mayak", "check", "--json"]
+stdout (0 bytes):
+
+stderr (104 bytes):
+mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent.
+
+exit=2
+PASS json-no-control
+remaining config files=[".config", ".config/mayak"]
+temporary XDG/HOME directory removed=True
+
+Additional in-process command scenarios from go test ./cmd/mayak -count=1 -v:
+=== RUN   TestCheckDeadControlAnchorsDown
+=== RUN   TestCheckDeadControlAnchorsDown/json=false
+    check_test.go:339: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=false3077427589/002/targets.signed.json"]
+    check_test.go:339: exit=2 stdout="t1  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nt2  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nSummary: 2 checked, inconclusive 2\nThe control node was unreachable, so nothing could be measured.\nNothing was sent.\nThe control node was unreachable, so no result of this run can be trusted.\n" stderr=""
+=== RUN   TestCheckDeadControlAnchorsDown/json=true
+    check_test.go:339: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=true1111462994/002/targets.signed.json" "--json"]
+    check_test.go:339: exit=2 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"d043b19a6d\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"},{\"target\":\"t2\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"}]}]\n" stderr=""
+--- PASS: TestCheckDeadControlAnchorsDown (0.41s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=false (0.21s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=true (0.21s)
+=== RUN   TestCheckAllowlistModeExitZero
+    check_test.go:378: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckAllowlistModeExitZero3415830432/002/targets.signed.json"]
+    check_test.go:378: exit=0 stdout="t1  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nt2  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nSummary: 2 checked, allowlist_mode 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckAllowlistModeExitZero (0.21s)

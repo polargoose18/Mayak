@@ -1,0 +1,1033 @@
+Task 13 CLI hardening verification
+BASE ae0e5db437c375872f2972d6e91943278c666004
+UTC 2026-11-09T20:29:46Z
+Toolchain go version go1.27.1-X:nodwarf5 linux/amd64
+Scope: cmd/mayak only; other working-tree changes belong to parallel tasks.
+LSP: unavailable because gopls is not installed.
+
+$ gofmt -w cmd/mayak/*.go
+EXIT=0
+
+$ go vet ./cmd/mayak
+EXIT=0
+
+$ go test ./cmd/mayak -count=1
+ok  	github.com/polargoose18/mayak/cmd/mayak	5.207s
+EXIT=0
+
+$ go test ./cmd/mayak -count=2 -v
+=== RUN   TestCheckInterruptMidRun
+    check_interrupt_test.go:94: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptMidRun3637784353/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:94: exit=130 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"9cb1eb0314\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    check_interrupt_test.go:127: state before: rev="2026-11-08.1\n" rotation="2\n"; after: rev="2026-11-08.1\n" rotation="2\n"
+--- PASS: TestCheckInterruptMidRun (0.01s)
+=== RUN   TestCheckInterruptText
+    check_interrupt_test.go:136: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText900837718/003/targets.signed.json"]
+    check_interrupt_test.go:136: exit=130 stdout="t1  ok  The site opened normally.\nt2  not measured\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+--- PASS: TestCheckInterruptText (0.01s)
+=== RUN   TestCheckInterruptBeforeStart
+    check_interrupt_test.go:164: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1506245360/003/targets.signed.json"]
+    check_interrupt_test.go:164: exit=130 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+    check_interrupt_test.go:175: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1506245360/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:175: exit=130 stdout="" stderr=""
+    check_interrupt_test.go:194: cancelled before start: no state files or staging directories remain
+--- PASS: TestCheckInterruptBeforeStart (0.00s)
+=== RUN   TestCheckInterruptSignal
+    check_interrupt_test.go:344: surface=OS subprocess invocation=["/tmp/go-build850043469/b001/mayak.test" "-test.run=^TestCheckInterruptSignal$" "-test.v"] env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER="/tmp/TestCheckInterruptSignal274807246/001/signal-ready" XDG_CONFIG_HOME="/tmp/TestCheckInterruptSignal274807246/001"
+    check_interrupt_test.go:361: marker="t1 complete; pool paused before t2\n"
+    check_interrupt_test.go:373: calling cmd.Process.Signal(os.Interrupt) pid=634538
+    check_interrupt_test.go:382: child test exit=0
+    check_interrupt_test.go:354: child stdout:
+        === RUN   TestCheckInterruptSignal
+            check_interrupt_test.go:309: surface=CLI signal.NotifyContext invocation=mayak check --targets-file "/tmp/TestCheckInterruptSignal274807246/001/TestCheckInterruptSignal323092277/003/targets.signed.json" --json
+            check_interrupt_test.go:323: state rotation byte-identical: before="2\n" after="2\n"
+            check_interrupt_test.go:323: state targets.rev byte-identical: before="2026-11-08.1\n" after="2026-11-08.1\n"
+        SIGNAL_CHILD_JSON=[{"schema":"mayak.report/1","report_id":"d605eb0649","ts":"2026-11-09T12:00:00Z","agent":{"ver":"dev","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"unknown","country":"","region":null},"targets_rev":"2026-11-09.1","results":[{"target":"t1","test":"http","verdict":"ok","evidence":{"anchors_alive":true,"ctrl_alive":true,"dns_control":"ok","dns_system":"ok","external":"reachable","http_hash":"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398","http_result":"responded","http_size":75,"http_status":200,"tcp":"ok","tls_neutral_sni":"cert_invalid","tls_target_sni":"ok","tls_via_control":"ok"}}]}]
+        SIGNAL_CHILD_EXIT=130
+            check_interrupt_test.go:326: stderr=""
+        --- PASS: TestCheckInterruptSignal (0.02s)
+        PASS
+        
+        child stderr:
+--- PASS: TestCheckInterruptSignal (0.02s)
+=== RUN   TestCheckRunOK
+    check_test.go:224: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckRunOK1591759105/003/targets.signed.json" "--limit" "5"]
+    check_test.go:224: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckRunOK (0.23s)
+=== RUN   TestCheckNoControlGuard
+    check_test.go:251: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckNoControlGuard2552962886/003/targets.signed.json"]
+    check_test.go:251: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckNoControlGuard (0.01s)
+=== RUN   TestCheckJSON
+    check_test.go:265: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckJSON2311945769/003/targets.signed.json" "--json"]
+    check_test.go:265: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"afcaa7db5b\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+--- PASS: TestCheckJSON (0.24s)
+=== RUN   TestCheckLimitBounds
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2009930429/003/targets.signed.json" "--limit" "3"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2009930429/003/targets.signed.json" "--limit" "4"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 4\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2009930429/003/targets.signed.json" "--limit" "21"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 21\n"
+--- PASS: TestCheckLimitBounds (0.01s)
+=== RUN   TestCheckBadTargetsKind
+    check_test.go:303: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckBadTargetsKind3006177921/003/targets.signed.json" "--targets" "cat"]
+    check_test.go:303: exit=1 stdout="" stderr="error: --targets must be \"core\" or empty, got \"cat\"\n"
+--- PASS: TestCheckBadTargetsKind (0.01s)
+=== RUN   TestCheckExpiredList
+    check_test.go:324: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckExpiredList2180417340/003/targets.signed.json"]
+    check_test.go:324: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckExpiredList2180417340/003/targets.signed.json) expired on 2026-11-09. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestCheckExpiredList (0.01s)
+=== RUN   TestCheckDeadControlAnchorsDown
+=== RUN   TestCheckDeadControlAnchorsDown/json=false
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=false1117566508/003/targets.signed.json"]
+    check_test.go:346: exit=2 stdout="t1  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nt2  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nSummary: 2 checked, inconclusive 2\nThe control node was unreachable, so nothing could be measured.\nNothing was sent.\nThe control node was unreachable, so no result of this run can be trusted.\n" stderr=""
+=== RUN   TestCheckDeadControlAnchorsDown/json=true
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=true1800880159/003/targets.signed.json" "--json"]
+    check_test.go:346: exit=2 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"3aeddc1136\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"},{\"target\":\"t2\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"}]}]\n" stderr=""
+--- PASS: TestCheckDeadControlAnchorsDown (0.42s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=false (0.21s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=true (0.21s)
+=== RUN   TestCheckAllowlistModeExitZero
+    check_test.go:385: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckAllowlistModeExitZero3557630075/003/targets.signed.json"]
+    check_test.go:385: exit=0 stdout="t1  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nt2  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nSummary: 2 checked, allowlist_mode 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckAllowlistModeExitZero (0.21s)
+=== RUN   TestProductionResolvers
+    check_test.go:411: production resolvers=[{Addr:1.1.1.1:853 Transport:dot ServerName:cloudflare-dns.com} {Addr:8.8.8.8:853 Transport:dot ServerName:dns.google}]; undeployed control resolver={Addr:invalid AddrPort Transport: ServerName:}
+--- PASS: TestProductionResolvers (0.00s)
+=== RUN   TestCheckIncompleteEnvGuard
+=== RUN   TestCheckIncompleteEnvGuard/url
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardurl3097149334/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/tls
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardtls3069865498/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/dns
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuarddns204557514/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/public
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardpublic3969556084/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckIncompleteEnvGuard (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/url (0.00s)
+    --- PASS: TestCheckIncompleteEnvGuard/tls (0.00s)
+    --- PASS: TestCheckIncompleteEnvGuard/dns (0.00s)
+    --- PASS: TestCheckIncompleteEnvGuard/public (0.00s)
+=== RUN   TestCheckTextWriteError
+=== RUN   TestCheckTextWriteError/normal
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrornormal4229474862/003/targets.signed.json" mode=normal stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/inconclusive
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinconclusive2473312891/003/targets.signed.json" mode=inconclusive stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/interrupted
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinterrupted3275495048/003/targets.signed.json" mode=interrupted stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+--- PASS: TestCheckTextWriteError (0.45s)
+    --- PASS: TestCheckTextWriteError/normal (0.23s)
+    --- PASS: TestCheckTextWriteError/inconclusive (0.21s)
+    --- PASS: TestCheckTextWriteError/interrupted (0.01s)
+=== RUN   TestCheckMockDPIVerdicts
+=== RUN   TestCheckMockDPIVerdicts/sni_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictssni_block211284042/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nt2  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nSummary: 2 checked, sni_block 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/dns_tamper
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsdns_tamper1021341592/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  dns_tamper  The DNS answer looks forged: the address is not a real one for this site.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 1, dns_tamper 1\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/http_stub
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictshttp_stub1583803220/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  http_stub  The site answers with a known block page instead of its real content.\nt2  http_stub  The site answers with a known block page instead of its real content.\nSummary: 2 checked, http_stub 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/ip_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsip_block4180694317/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  ip_block  The site's address refuses connections, which looks like an IP block.\nt2  ip_block  The site's address refuses connections, which looks like an IP block.\nSummary: 2 checked, ip_block 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckMockDPIVerdicts (0.92s)
+    --- PASS: TestCheckMockDPIVerdicts/sni_block (0.21s)
+    --- PASS: TestCheckMockDPIVerdicts/dns_tamper (0.24s)
+    --- PASS: TestCheckMockDPIVerdicts/http_stub (0.25s)
+    --- PASS: TestCheckMockDPIVerdicts/ip_block (0.22s)
+=== RUN   TestCheckConcurrentPublication
+    check_test.go:541: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3482817608/004/targets.signed.json"]
+    check_test.go:555: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3482817608/005/targets.signed.json"]
+    check_test.go:555: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckConcurrentPublication3482817608/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    check_test.go:541: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    check_test.go:581: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3482817608/005/targets.signed.json"]
+    check_test.go:581: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckConcurrentPublication3482817608/005/targets.signed.json) has version 2026-11-09.1, which is older than version 2026-11-09.2 that mayak has already accepted. An older list is refused. Update mayak or pass the newer signed list with --targets-file.\n"
+    check_test.go:590: accepted targets.rev unchanged after rejected competitor and rollback: "2026-11-09.2\n"
+    check_test.go:590: accepted rotation unchanged after rejected competitor and rollback: "0\n"
+--- PASS: TestCheckConcurrentPublication (0.06s)
+=== RUN   TestVersionCommand
+--- PASS: TestVersionCommand (0.00s)
+=== RUN   TestSmokeVersion
+    smoke_test.go:145: surface=real binary invocation=["/tmp/TestSmokeVersion4046717505/001/mayak" "version"]
+    smoke_test.go:145: exit=0 stdout="dev\n" stderr=""
+--- PASS: TestSmokeVersion (0.51s)
+=== RUN   TestSmokeExpiredList
+    smoke_test.go:160: surface=real binary invocation=["/tmp/TestSmokeExpiredList1119200744/001/mayak" "check" "--targets-file" "/tmp/TestSmokeExpiredList1119200744/002/targets.signed.json"]
+    smoke_test.go:160: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeExpiredList1119200744/002/targets.signed.json) expired on 2026-11-08. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestSmokeExpiredList (0.61s)
+=== RUN   TestSmokeForeignKeyList
+    smoke_test.go:180: surface=real binary invocation=["/tmp/TestSmokeForeignKeyList68975642/001/mayak" "check" "--targets-file" "/tmp/TestSmokeForeignKeyList68975642/002/targets.signed.json"]
+    smoke_test.go:180: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeForeignKeyList68975642/002/targets.signed.json) is not signed by a key this mayak trusts. Use the list built into mayak or a list from the project.\n"
+--- PASS: TestSmokeForeignKeyList (0.48s)
+=== RUN   TestSmokeLimitOutOfRange
+    smoke_test.go:193: surface=real binary invocation=["/tmp/TestSmokeLimitOutOfRange3155243101/001/mayak" "check" "--limit" "3"]
+    smoke_test.go:193: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+--- PASS: TestSmokeLimitOutOfRange (0.50s)
+=== RUN   TestSmokeLeavesNoStateOutsideTemp
+--- PASS: TestSmokeLeavesNoStateOutsideTemp (0.48s)
+=== RUN   TestCheckInterruptMidRun
+    check_interrupt_test.go:94: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptMidRun1980930092/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:94: exit=130 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"ef61eb63a3\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    check_interrupt_test.go:127: state before: rev="2026-11-08.1\n" rotation="2\n"; after: rev="2026-11-08.1\n" rotation="2\n"
+--- PASS: TestCheckInterruptMidRun (0.01s)
+=== RUN   TestCheckInterruptText
+    check_interrupt_test.go:136: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText866004256/003/targets.signed.json"]
+    check_interrupt_test.go:136: exit=130 stdout="t1  ok  The site opened normally.\nt2  not measured\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+--- PASS: TestCheckInterruptText (0.01s)
+=== RUN   TestCheckInterruptBeforeStart
+    check_interrupt_test.go:164: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1911774794/003/targets.signed.json"]
+    check_interrupt_test.go:164: exit=130 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+    check_interrupt_test.go:175: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1911774794/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:175: exit=130 stdout="" stderr=""
+    check_interrupt_test.go:194: cancelled before start: no state files or staging directories remain
+--- PASS: TestCheckInterruptBeforeStart (0.00s)
+=== RUN   TestCheckInterruptSignal
+    check_interrupt_test.go:344: surface=OS subprocess invocation=["/tmp/go-build850043469/b001/mayak.test" "-test.run=^TestCheckInterruptSignal$" "-test.v"] env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER="/tmp/TestCheckInterruptSignal1845839056/001/signal-ready" XDG_CONFIG_HOME="/tmp/TestCheckInterruptSignal1845839056/001"
+    check_interrupt_test.go:361: marker="t1 complete; pool paused before t2\n"
+    check_interrupt_test.go:373: calling cmd.Process.Signal(os.Interrupt) pid=634961
+    check_interrupt_test.go:382: child test exit=0
+    check_interrupt_test.go:354: child stdout:
+        === RUN   TestCheckInterruptSignal
+            check_interrupt_test.go:309: surface=CLI signal.NotifyContext invocation=mayak check --targets-file "/tmp/TestCheckInterruptSignal1845839056/001/TestCheckInterruptSignal1515114689/003/targets.signed.json" --json
+            check_interrupt_test.go:323: state rotation byte-identical: before="2\n" after="2\n"
+            check_interrupt_test.go:323: state targets.rev byte-identical: before="2026-11-08.1\n" after="2026-11-08.1\n"
+        SIGNAL_CHILD_JSON=[{"schema":"mayak.report/1","report_id":"7370cdd2a3","ts":"2026-11-09T12:00:00Z","agent":{"ver":"dev","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"unknown","country":"","region":null},"targets_rev":"2026-11-09.1","results":[{"target":"t1","test":"http","verdict":"ok","evidence":{"anchors_alive":true,"ctrl_alive":true,"dns_control":"ok","dns_system":"ok","external":"reachable","http_hash":"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398","http_result":"responded","http_size":75,"http_status":200,"tcp":"ok","tls_neutral_sni":"cert_invalid","tls_target_sni":"ok","tls_via_control":"ok"}}]}]
+        SIGNAL_CHILD_EXIT=130
+            check_interrupt_test.go:326: stderr=""
+        --- PASS: TestCheckInterruptSignal (0.02s)
+        PASS
+        
+        child stderr:
+--- PASS: TestCheckInterruptSignal (0.02s)
+=== RUN   TestCheckRunOK
+    check_test.go:224: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckRunOK4190854467/003/targets.signed.json" "--limit" "5"]
+    check_test.go:224: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckRunOK (0.23s)
+=== RUN   TestCheckNoControlGuard
+    check_test.go:251: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckNoControlGuard2765294189/003/targets.signed.json"]
+    check_test.go:251: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckNoControlGuard (0.01s)
+=== RUN   TestCheckJSON
+    check_test.go:265: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckJSON3100827047/003/targets.signed.json" "--json"]
+    check_test.go:265: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"bf2a49ff00\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+--- PASS: TestCheckJSON (0.22s)
+=== RUN   TestCheckLimitBounds
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2170270379/003/targets.signed.json" "--limit" "3"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2170270379/003/targets.signed.json" "--limit" "4"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 4\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2170270379/003/targets.signed.json" "--limit" "21"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 21\n"
+--- PASS: TestCheckLimitBounds (0.00s)
+=== RUN   TestCheckBadTargetsKind
+    check_test.go:303: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckBadTargetsKind2282496699/003/targets.signed.json" "--targets" "cat"]
+    check_test.go:303: exit=1 stdout="" stderr="error: --targets must be \"core\" or empty, got \"cat\"\n"
+--- PASS: TestCheckBadTargetsKind (0.00s)
+=== RUN   TestCheckExpiredList
+    check_test.go:324: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckExpiredList3551013936/003/targets.signed.json"]
+    check_test.go:324: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckExpiredList3551013936/003/targets.signed.json) expired on 2026-11-09. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestCheckExpiredList (0.00s)
+=== RUN   TestCheckDeadControlAnchorsDown
+=== RUN   TestCheckDeadControlAnchorsDown/json=false
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=false4265187224/003/targets.signed.json"]
+    check_test.go:346: exit=2 stdout="t1  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nt2  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nSummary: 2 checked, inconclusive 2\nThe control node was unreachable, so nothing could be measured.\nNothing was sent.\nThe control node was unreachable, so no result of this run can be trusted.\n" stderr=""
+=== RUN   TestCheckDeadControlAnchorsDown/json=true
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=true2039973150/003/targets.signed.json" "--json"]
+    check_test.go:346: exit=2 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"53854be275\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"},{\"target\":\"t2\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"}]}]\n" stderr=""
+--- PASS: TestCheckDeadControlAnchorsDown (0.41s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=false (0.21s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=true (0.21s)
+=== RUN   TestCheckAllowlistModeExitZero
+    check_test.go:385: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckAllowlistModeExitZero1052300064/003/targets.signed.json"]
+    check_test.go:385: exit=0 stdout="t1  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nt2  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nSummary: 2 checked, allowlist_mode 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckAllowlistModeExitZero (0.21s)
+=== RUN   TestProductionResolvers
+    check_test.go:411: production resolvers=[{Addr:1.1.1.1:853 Transport:dot ServerName:cloudflare-dns.com} {Addr:8.8.8.8:853 Transport:dot ServerName:dns.google}]; undeployed control resolver={Addr:invalid AddrPort Transport: ServerName:}
+--- PASS: TestProductionResolvers (0.00s)
+=== RUN   TestCheckIncompleteEnvGuard
+=== RUN   TestCheckIncompleteEnvGuard/url
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardurl1800650086/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/tls
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardtls3584973268/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/dns
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuarddns1827562921/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/public
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardpublic498930661/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckIncompleteEnvGuard (0.02s)
+    --- PASS: TestCheckIncompleteEnvGuard/url (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/tls (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/dns (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/public (0.01s)
+=== RUN   TestCheckTextWriteError
+=== RUN   TestCheckTextWriteError/normal
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrornormal3786370926/003/targets.signed.json" mode=normal stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/inconclusive
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinconclusive55032525/003/targets.signed.json" mode=inconclusive stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/interrupted
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinterrupted3239998652/003/targets.signed.json" mode=interrupted stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+--- PASS: TestCheckTextWriteError (0.43s)
+    --- PASS: TestCheckTextWriteError/normal (0.22s)
+    --- PASS: TestCheckTextWriteError/inconclusive (0.20s)
+    --- PASS: TestCheckTextWriteError/interrupted (0.01s)
+=== RUN   TestCheckMockDPIVerdicts
+=== RUN   TestCheckMockDPIVerdicts/sni_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictssni_block3072381310/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nt2  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nSummary: 2 checked, sni_block 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/dns_tamper
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsdns_tamper720975779/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  dns_tamper  The DNS answer looks forged: the address is not a real one for this site.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 1, dns_tamper 1\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/http_stub
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictshttp_stub4271959983/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  http_stub  The site answers with a known block page instead of its real content.\nt2  http_stub  The site answers with a known block page instead of its real content.\nSummary: 2 checked, http_stub 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/ip_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsip_block3819765028/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  ip_block  The site's address refuses connections, which looks like an IP block.\nt2  ip_block  The site's address refuses connections, which looks like an IP block.\nSummary: 2 checked, ip_block 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckMockDPIVerdicts (0.90s)
+    --- PASS: TestCheckMockDPIVerdicts/sni_block (0.22s)
+    --- PASS: TestCheckMockDPIVerdicts/dns_tamper (0.23s)
+    --- PASS: TestCheckMockDPIVerdicts/http_stub (0.23s)
+    --- PASS: TestCheckMockDPIVerdicts/ip_block (0.22s)
+=== RUN   TestCheckConcurrentPublication
+    check_test.go:541: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication4077754612/004/targets.signed.json"]
+    check_test.go:555: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication4077754612/005/targets.signed.json"]
+    check_test.go:555: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckConcurrentPublication4077754612/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    check_test.go:541: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    check_test.go:581: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication4077754612/005/targets.signed.json"]
+    check_test.go:581: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckConcurrentPublication4077754612/005/targets.signed.json) has version 2026-11-09.1, which is older than version 2026-11-09.2 that mayak has already accepted. An older list is refused. Update mayak or pass the newer signed list with --targets-file.\n"
+    check_test.go:590: accepted targets.rev unchanged after rejected competitor and rollback: "2026-11-09.2\n"
+    check_test.go:590: accepted rotation unchanged after rejected competitor and rollback: "0\n"
+--- PASS: TestCheckConcurrentPublication (0.05s)
+=== RUN   TestVersionCommand
+--- PASS: TestVersionCommand (0.00s)
+=== RUN   TestSmokeVersion
+    smoke_test.go:145: surface=real binary invocation=["/tmp/TestSmokeVersion2321069979/001/mayak" "version"]
+    smoke_test.go:145: exit=0 stdout="dev\n" stderr=""
+--- PASS: TestSmokeVersion (0.49s)
+=== RUN   TestSmokeExpiredList
+    smoke_test.go:160: surface=real binary invocation=["/tmp/TestSmokeExpiredList2913290086/001/mayak" "check" "--targets-file" "/tmp/TestSmokeExpiredList2913290086/002/targets.signed.json"]
+    smoke_test.go:160: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeExpiredList2913290086/002/targets.signed.json) expired on 2026-11-08. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestSmokeExpiredList (0.63s)
+=== RUN   TestSmokeForeignKeyList
+    smoke_test.go:180: surface=real binary invocation=["/tmp/TestSmokeForeignKeyList3214388382/001/mayak" "check" "--targets-file" "/tmp/TestSmokeForeignKeyList3214388382/002/targets.signed.json"]
+    smoke_test.go:180: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeForeignKeyList3214388382/002/targets.signed.json) is not signed by a key this mayak trusts. Use the list built into mayak or a list from the project.\n"
+--- PASS: TestSmokeForeignKeyList (0.48s)
+=== RUN   TestSmokeLimitOutOfRange
+    smoke_test.go:193: surface=real binary invocation=["/tmp/TestSmokeLimitOutOfRange2065953760/001/mayak" "check" "--limit" "3"]
+    smoke_test.go:193: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+--- PASS: TestSmokeLimitOutOfRange (0.48s)
+=== RUN   TestSmokeLeavesNoStateOutsideTemp
+--- PASS: TestSmokeLeavesNoStateOutsideTemp (0.52s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak	10.292s
+EXIT=0
+
+$ go build -o /tmp/mayak ./cmd/mayak
+EXIT=0
+
+REQUIRED_CHECKS_PASS
+=== RUN   TestCheckIncompleteResolverFields
+=== RUN   TestCheckIncompleteResolverFields/public-first-address
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-first-address1223440199/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/public-second-address
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-second-address2602238244/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/public-port
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-port1751431093/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/public-transport
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-transport3599803988/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/public-server-name
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-server-name3563606111/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nt2  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nSummary: 2 checked, tls_intercept 2\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nt2  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nSummary: 2 checked, tls_intercept 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/control-port
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-port3018282520/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/control-transport
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-transport1091150985/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/control-server-name
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-server-name456129406/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nt2  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nSummary: 2 checked, tls_intercept 2\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nt2  tls_intercept  The TLS certificate does not match the site, which looks like interception.\nSummary: 2 checked, tls_intercept 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckIncompleteResolverFields/tls-port
+    hardening_test.go:37: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldstls-port2272873639/003/targets.signed.json"]
+    hardening_test.go:37: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+    hardening_test.go:38: incomplete config: exit=0 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\n" stderr=""
+--- FAIL: TestCheckIncompleteResolverFields (1.90s)
+    --- FAIL: TestCheckIncompleteResolverFields/public-first-address (0.21s)
+    --- FAIL: TestCheckIncompleteResolverFields/public-second-address (0.21s)
+    --- FAIL: TestCheckIncompleteResolverFields/public-port (0.21s)
+    --- FAIL: TestCheckIncompleteResolverFields/public-transport (0.21s)
+    --- FAIL: TestCheckIncompleteResolverFields/public-server-name (0.22s)
+    --- FAIL: TestCheckIncompleteResolverFields/control-port (0.21s)
+    --- FAIL: TestCheckIncompleteResolverFields/control-transport (0.21s)
+    --- FAIL: TestCheckIncompleteResolverFields/control-server-name (0.21s)
+    --- FAIL: TestCheckIncompleteResolverFields/tls-port (0.21s)
+=== RUN   TestCheckJSONWriteError
+=== RUN   TestCheckJSONWriteError/normal
+    hardening_test.go:59: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrornormal3788853367/003/targets.signed.json" --json mode=normal stdout=failedOutput
+    hardening_test.go:62: exit=1 error=print the report: stdout closed
+=== RUN   TestCheckJSONWriteError/inconclusive
+    hardening_test.go:59: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrorinconclusive3999025687/003/targets.signed.json" --json mode=inconclusive stdout=failedOutput
+    hardening_test.go:62: exit=1 error=print the report: stdout closed
+=== RUN   TestCheckJSONWriteError/interrupted
+    hardening_test.go:59: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrorinterrupted2755912381/003/targets.signed.json" --json mode=interrupted stdout=failedOutput
+    hardening_test.go:62: exit=1 error=print the report: stdout closed
+--- PASS: TestCheckJSONWriteError (0.46s)
+    --- PASS: TestCheckJSONWriteError/normal (0.23s)
+    --- PASS: TestCheckJSONWriteError/inconclusive (0.21s)
+    --- PASS: TestCheckJSONWriteError/interrupted (0.02s)
+=== RUN   TestCheckMockDPIJSON
+=== RUN   TestCheckMockDPIJSON/sni_block
+    hardening_test.go:95: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONsni_block721012306/003/targets.signed.json" "--json"]
+    hardening_test.go:95: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"943a35d0b3\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"tls_sni\",\"verdict\":\"sni_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"reset_after_hello\",\"tls_via_control\":\"reset_after_hello\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"timeout_unknown\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_result\":\"timeout\",\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:106: validated report: target=t1 verdict=sni_block test=tls_sni control requests=4
+=== RUN   TestCheckMockDPIJSON/dns_tamper
+    hardening_test.go:95: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONdns_tamper1603016341/003/targets.signed.json" "--json"]
+    hardening_test.go:95: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"a709c3580e\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"dns\",\"verdict\":\"dns_tamper\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:106: validated report: target=t1 verdict=dns_tamper test=dns control requests=6
+=== RUN   TestCheckMockDPIJSON/http_stub
+    hardening_test.go:95: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONhttp_stub2537735103/003/targets.signed.json" "--json"]
+    hardening_test.go:95: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"42a2051e7c\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"http_stub\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"5cfd5bd6a69f6060b7fbe8e13d4e8b182a61d8941d37f0a0e3c47c49911e98ae\",\"http_result\":\"responded\",\"http_size\":66,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"http_stub\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"5cfd5bd6a69f6060b7fbe8e13d4e8b182a61d8941d37f0a0e3c47c49911e98ae\",\"http_result\":\"responded\",\"http_size\":66,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:106: validated report: target=t1 verdict=http_stub test=http control requests=6
+=== RUN   TestCheckMockDPIJSON/ip_block
+    hardening_test.go:95: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONip_block3095741341/003/targets.signed.json" "--json"]
+    hardening_test.go:95: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"79c7cc66ec\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"tcp\",\"verdict\":\"ip_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"reset\"}},{\"target\":\"t2\",\"test\":\"tcp\",\"verdict\":\"ip_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"reset\"}}]}]\n" stderr=""
+    hardening_test.go:106: validated report: target=t1 verdict=ip_block test=tcp control requests=4
+--- PASS: TestCheckMockDPIJSON (8.91s)
+    --- PASS: TestCheckMockDPIJSON/sni_block (8.21s)
+    --- PASS: TestCheckMockDPIJSON/dns_tamper (0.24s)
+    --- PASS: TestCheckMockDPIJSON/http_stub (0.25s)
+    --- PASS: TestCheckMockDPIJSON/ip_block (0.21s)
+=== RUN   TestCheckCrashLockRecovery
+    hardening_test.go:118: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckCrashLockRecovery1240022569/003/targets.signed.json"]
+    hardening_test.go:118: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckCrashLockRecovery1240022569/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    hardening_test.go:123: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckCrashLockRecovery1240022569/003/targets.signed.json"]
+    hardening_test.go:123: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    hardening_test.go:126: old crash lock preserved without waiting or network; explicit owner-verified removal recovered the command; normal exit released lock
+--- PASS: TestCheckCrashLockRecovery (0.24s)
+FAIL
+FAIL	github.com/polargoose18/mayak/cmd/mayak	11.521s
+FAIL
+
+MANUAL CLI QA: real /tmp/mayak binary, captured stdout/stderr and exit status.
+
+SCENARIO=version surface=real CLI invocation={"argv": ["/tmp/mayak", "version"], "env": {"HOME": "/tmp/task-13-cli-rfaorgr8", "XDG_CONFIG_HOME": "/tmp/task-13-cli-rfaorgr8/xdg", "APPDATA": "/tmp/task-13-cli-rfaorgr8/appdata"}}
+EXIT=0
+STDOUT='dev\n'
+STDERR=''
+STATE={}
+VERDICT=PASS
+
+SCENARIO=invalid-limit surface=real CLI invocation={"argv": ["/tmp/mayak", "check", "--limit", "3"], "env": {"HOME": "/tmp/task-13-cli-jmjiia54", "XDG_CONFIG_HOME": "/tmp/task-13-cli-jmjiia54/xdg", "APPDATA": "/tmp/task-13-cli-jmjiia54/appdata"}}
+EXIT=1
+STDOUT=''
+STDERR='error: --limit must be between 5 and 20, got 3\n'
+STATE={}
+VERDICT=PASS
+
+SCENARIO=production-guard surface=real CLI invocation={"argv": ["/tmp/mayak", "check", "--limit", "5"], "env": {"HOME": "/tmp/task-13-cli-9gbo67sm", "XDG_CONFIG_HOME": "/tmp/task-13-cli-9gbo67sm/xdg", "APPDATA": "/tmp/task-13-cli-9gbo67sm/appdata"}}
+EXIT=2
+STDOUT=''
+STDERR='mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n'
+STATE={}
+VERDICT=PASS
+
+SCENARIO=json-guard surface=real CLI invocation={"argv": ["/tmp/mayak", "check", "--json"], "env": {"HOME": "/tmp/task-13-cli-g4b62w_b", "XDG_CONFIG_HOME": "/tmp/task-13-cli-g4b62w_b/xdg", "APPDATA": "/tmp/task-13-cli-g4b62w_b/appdata"}}
+EXIT=2
+STDOUT=''
+STDERR='mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n'
+STATE={}
+VERDICT=PASS
+
+SCENARIO=existing-lock surface=real CLI invocation={"argv": ["/tmp/mayak", "check"], "env": {"HOME": "/tmp/task-13-cli-ytfehn0q", "XDG_CONFIG_HOME": "/tmp/task-13-cli-ytfehn0q/xdg", "APPDATA": "/tmp/task-13-cli-ytfehn0q/appdata"}}
+EXIT=1
+STDOUT=''
+STDERR='error: mayak check is locked by /tmp/task-13-cli-ytfehn0q/xdg/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n'
+STATE={"rotation": "7\n", "targets.rev": "2026-11-09.2\n", "check.lock": "QA fixture: pretend active owner\n"}
+VERDICT=PASS
+
+SCENARIO=source-failure surface=real CLI invocation={"argv": ["/tmp/mayak", "check", "--targets-file", "/nonexistent/task-13-targets.signed.json"], "env": {"HOME": "/tmp/task-13-cli-126oc76c", "XDG_CONFIG_HOME": "/tmp/task-13-cli-126oc76c/xdg", "APPDATA": "/tmp/task-13-cli-126oc76c/appdata"}}
+EXIT=1
+STDOUT=''
+STDERR='error: mayak cannot read the targets list /nonexistent/task-13-targets.signed.json. Check the path given with --targets-file.\n'
+STATE={}
+VERDICT=PASS
+
+MANUAL_CLI_QA_PASS
+
+COMMAND: go vet ./cmd/mayak
+
+COMMAND: go test ./cmd/mayak -count=2 -v
+
+COMMAND: go build ./cmd/mayak (GOBIN-equivalent artifact in assigned command directory)
+go vet exit=0
+go build exit=0
+=== RUN   TestCheckInterruptMidRun
+    check_interrupt_test.go:94: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptMidRun782031681/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:94: exit=130 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"2184fe5e84\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    check_interrupt_test.go:127: state before: rev="2026-11-08.1\n" rotation="2\n"; after: rev="2026-11-08.1\n" rotation="2\n"
+--- PASS: TestCheckInterruptMidRun (0.01s)
+=== RUN   TestCheckInterruptText
+    check_interrupt_test.go:136: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText794484519/003/targets.signed.json"]
+    check_interrupt_test.go:136: exit=130 stdout="t1  ok  The site opened normally.\nt2  not measured\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+--- PASS: TestCheckInterruptText (0.01s)
+=== RUN   TestCheckInterruptBeforeStart
+    check_interrupt_test.go:164: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1515168258/003/targets.signed.json"]
+    check_interrupt_test.go:164: exit=130 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+    check_interrupt_test.go:175: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart1515168258/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:175: exit=130 stdout="" stderr=""
+    check_interrupt_test.go:194: cancelled before start: no state files or staging directories remain
+--- PASS: TestCheckInterruptBeforeStart (0.00s)
+=== RUN   TestCheckInterruptSignal
+    check_interrupt_test.go:344: surface=OS subprocess invocation=["/tmp/go-build526685772/b001/mayak.test" "-test.run=^TestCheckInterruptSignal$" "-test.v"] env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER="/tmp/TestCheckInterruptSignal1817285914/001/signal-ready" XDG_CONFIG_HOME="/tmp/TestCheckInterruptSignal1817285914/001"
+    check_interrupt_test.go:361: marker="t1 complete; pool paused before t2\n"
+    check_interrupt_test.go:373: calling cmd.Process.Signal(os.Interrupt) pid=641508
+    check_interrupt_test.go:382: child test exit=0
+    check_interrupt_test.go:354: child stdout:
+        === RUN   TestCheckInterruptSignal
+            check_interrupt_test.go:309: surface=CLI signal.NotifyContext invocation=mayak check --targets-file "/tmp/TestCheckInterruptSignal1817285914/001/TestCheckInterruptSignal3717793843/003/targets.signed.json" --json
+            check_interrupt_test.go:323: state targets.rev byte-identical: before="2026-11-08.1\n" after="2026-11-08.1\n"
+            check_interrupt_test.go:323: state rotation byte-identical: before="2\n" after="2\n"
+        SIGNAL_CHILD_JSON=[{"schema":"mayak.report/1","report_id":"f53ad0dab4","ts":"2026-11-09T12:00:00Z","agent":{"ver":"dev","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"unknown","country":"","region":null},"targets_rev":"2026-11-09.1","results":[{"target":"t1","test":"http","verdict":"ok","evidence":{"anchors_alive":true,"ctrl_alive":true,"dns_control":"ok","dns_system":"ok","external":"reachable","http_hash":"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398","http_result":"responded","http_size":75,"http_status":200,"tcp":"ok","tls_neutral_sni":"cert_invalid","tls_target_sni":"ok","tls_via_control":"ok"}}]}]
+        SIGNAL_CHILD_EXIT=130
+            check_interrupt_test.go:326: stderr=""
+        --- PASS: TestCheckInterruptSignal (0.02s)
+        PASS
+        
+        child stderr:
+--- PASS: TestCheckInterruptSignal (0.02s)
+=== RUN   TestCheckRunOK
+    check_test.go:224: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckRunOK225335406/003/targets.signed.json" "--limit" "5"]
+    check_test.go:224: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckRunOK (0.23s)
+=== RUN   TestCheckNoControlGuard
+    check_test.go:251: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckNoControlGuard3716372093/003/targets.signed.json"]
+    check_test.go:251: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckNoControlGuard (0.01s)
+=== RUN   TestCheckJSON
+    check_test.go:265: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckJSON3156563266/003/targets.signed.json" "--json"]
+    check_test.go:265: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"ea3f1827e9\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+--- PASS: TestCheckJSON (0.24s)
+=== RUN   TestCheckLimitBounds
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2551890853/003/targets.signed.json" "--limit" "3"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2551890853/003/targets.signed.json" "--limit" "4"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 4\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2551890853/003/targets.signed.json" "--limit" "21"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 21\n"
+--- PASS: TestCheckLimitBounds (0.01s)
+=== RUN   TestCheckBadTargetsKind
+    check_test.go:303: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckBadTargetsKind1628606036/003/targets.signed.json" "--targets" "cat"]
+    check_test.go:303: exit=1 stdout="" stderr="error: --targets must be \"core\" or empty, got \"cat\"\n"
+--- PASS: TestCheckBadTargetsKind (0.01s)
+=== RUN   TestCheckExpiredList
+    check_test.go:324: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckExpiredList268230377/003/targets.signed.json"]
+    check_test.go:324: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckExpiredList268230377/003/targets.signed.json) expired on 2026-11-09. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestCheckExpiredList (0.01s)
+=== RUN   TestCheckDeadControlAnchorsDown
+=== RUN   TestCheckDeadControlAnchorsDown/json=false
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=false3108838064/003/targets.signed.json"]
+    check_test.go:346: exit=2 stdout="t1  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nt2  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nSummary: 2 checked, inconclusive 2\nThe control node was unreachable, so nothing could be measured.\nNothing was sent.\nThe control node was unreachable, so no result of this run can be trusted.\n" stderr=""
+=== RUN   TestCheckDeadControlAnchorsDown/json=true
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=true1052737421/003/targets.signed.json" "--json"]
+    check_test.go:346: exit=2 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"f3ba4884e9\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"},{\"target\":\"t2\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"}]}]\n" stderr=""
+--- PASS: TestCheckDeadControlAnchorsDown (0.41s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=false (0.21s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=true (0.20s)
+=== RUN   TestCheckAllowlistModeExitZero
+    check_test.go:385: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckAllowlistModeExitZero3465410695/003/targets.signed.json"]
+    check_test.go:385: exit=0 stdout="t1  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nt2  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nSummary: 2 checked, allowlist_mode 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckAllowlistModeExitZero (0.21s)
+=== RUN   TestProductionResolvers
+    check_test.go:411: production resolvers=[{Addr:1.1.1.1:853 Transport:dot ServerName:cloudflare-dns.com} {Addr:8.8.8.8:853 Transport:dot ServerName:dns.google}]; undeployed control resolver={Addr:invalid AddrPort Transport: ServerName:}
+--- PASS: TestProductionResolvers (0.00s)
+=== RUN   TestCheckIncompleteEnvGuard
+=== RUN   TestCheckIncompleteEnvGuard/url
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardurl4209784434/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/tls
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardtls101086918/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/dns
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuarddns658187850/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/public
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardpublic3436378040/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckIncompleteEnvGuard (0.03s)
+    --- PASS: TestCheckIncompleteEnvGuard/url (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/tls (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/dns (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/public (0.01s)
+=== RUN   TestCheckTextWriteError
+=== RUN   TestCheckTextWriteError/normal
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrornormal4135135225/003/targets.signed.json" mode=normal stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/inconclusive
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinconclusive2403550000/003/targets.signed.json" mode=inconclusive stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/interrupted
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinterrupted7886904/003/targets.signed.json" mode=interrupted stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+--- PASS: TestCheckTextWriteError (0.45s)
+    --- PASS: TestCheckTextWriteError/normal (0.24s)
+    --- PASS: TestCheckTextWriteError/inconclusive (0.21s)
+    --- PASS: TestCheckTextWriteError/interrupted (0.00s)
+=== RUN   TestCheckMockDPIVerdicts
+=== RUN   TestCheckMockDPIVerdicts/sni_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictssni_block4084513517/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nt2  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nSummary: 2 checked, sni_block 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/dns_tamper
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsdns_tamper2892680593/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  dns_tamper  The DNS answer looks forged: the address is not a real one for this site.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 1, dns_tamper 1\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/http_stub
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictshttp_stub1196307606/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  http_stub  The site answers with a known block page instead of its real content.\nt2  http_stub  The site answers with a known block page instead of its real content.\nSummary: 2 checked, http_stub 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/ip_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsip_block3119558168/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  ip_block  The site's address refuses connections, which looks like an IP block.\nt2  ip_block  The site's address refuses connections, which looks like an IP block.\nSummary: 2 checked, ip_block 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckMockDPIVerdicts (0.89s)
+    --- PASS: TestCheckMockDPIVerdicts/sni_block (0.22s)
+    --- PASS: TestCheckMockDPIVerdicts/dns_tamper (0.22s)
+    --- PASS: TestCheckMockDPIVerdicts/http_stub (0.23s)
+    --- PASS: TestCheckMockDPIVerdicts/ip_block (0.22s)
+=== RUN   TestCheckConcurrentPublication
+    check_test.go:541: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication1045920268/004/targets.signed.json"]
+    check_test.go:555: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication1045920268/005/targets.signed.json"]
+    check_test.go:555: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckConcurrentPublication1045920268/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    check_test.go:541: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    check_test.go:581: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication1045920268/005/targets.signed.json"]
+    check_test.go:581: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckConcurrentPublication1045920268/005/targets.signed.json) has version 2026-11-09.1, which is older than version 2026-11-09.2 that mayak has already accepted. An older list is refused. Update mayak or pass the newer signed list with --targets-file.\n"
+    check_test.go:590: accepted rotation unchanged after rejected competitor and rollback: "0\n"
+    check_test.go:590: accepted targets.rev unchanged after rejected competitor and rollback: "2026-11-09.2\n"
+--- PASS: TestCheckConcurrentPublication (0.07s)
+=== RUN   TestCheckIncompleteResolverFields
+=== RUN   TestCheckIncompleteResolverFields/public-first-address
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-first-address1995874867/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-second-address
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-second-address2903859048/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-port
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-port2857923931/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-transport
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-transport1054041049/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-server-name
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-server-name4158520193/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/control-port
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-port2442456681/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/control-transport
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-transport2145604234/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/control-server-name
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-server-name981939162/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/tls-port
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldstls-port3446897227/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckIncompleteResolverFields (0.03s)
+    --- PASS: TestCheckIncompleteResolverFields/public-first-address (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/public-second-address (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/public-port (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/public-transport (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/public-server-name (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/control-port (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/control-transport (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/control-server-name (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/tls-port (0.00s)
+=== RUN   TestCheckJSONWriteError
+=== RUN   TestCheckJSONWriteError/normal
+    hardening_test.go:87: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrornormal2397534527/003/targets.signed.json" --json mode=normal stdout=failedOutput
+    hardening_test.go:92: exit=1 error=print the report: stdout closed
+=== RUN   TestCheckJSONWriteError/inconclusive
+    hardening_test.go:87: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrorinconclusive1711892351/003/targets.signed.json" --json mode=inconclusive stdout=failedOutput
+    hardening_test.go:92: exit=1 error=print the report: stdout closed
+=== RUN   TestCheckJSONWriteError/interrupted
+    hardening_test.go:87: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrorinterrupted3875382071/003/targets.signed.json" --json mode=interrupted stdout=failedOutput
+    hardening_test.go:92: exit=1 error=print the report: stdout closed
+--- PASS: TestCheckJSONWriteError (0.47s)
+    --- PASS: TestCheckJSONWriteError/normal (0.24s)
+    --- PASS: TestCheckJSONWriteError/inconclusive (0.21s)
+    --- PASS: TestCheckJSONWriteError/interrupted (0.03s)
+=== RUN   TestCheckMockDPIJSON
+=== RUN   TestCheckMockDPIJSON/sni_block
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONsni_block810916011/003/targets.signed.json" "--json"]
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"e1911d1ca4\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"tls_sni\",\"verdict\":\"sni_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"reset_after_hello\",\"tls_via_control\":\"reset_after_hello\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"timeout_unknown\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_result\":\"timeout\",\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=sni_block test=tls_sni control requests=4
+=== RUN   TestCheckMockDPIJSON/dns_tamper
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONdns_tamper2863589011/003/targets.signed.json" "--json"]
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"d698b198d3\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"dns\",\"verdict\":\"dns_tamper\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=dns_tamper test=dns control requests=6
+=== RUN   TestCheckMockDPIJSON/http_stub
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONhttp_stub2914948656/003/targets.signed.json" "--json"]
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"9bdc52b5f9\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"http_stub\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"5cfd5bd6a69f6060b7fbe8e13d4e8b182a61d8941d37f0a0e3c47c49911e98ae\",\"http_result\":\"responded\",\"http_size\":66,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"http_stub\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"5cfd5bd6a69f6060b7fbe8e13d4e8b182a61d8941d37f0a0e3c47c49911e98ae\",\"http_result\":\"responded\",\"http_size\":66,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=http_stub test=http control requests=6
+=== RUN   TestCheckMockDPIJSON/ip_block
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONip_block1980435257/003/targets.signed.json" "--json"]
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"0ac1b43378\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"tcp\",\"verdict\":\"ip_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"reset\"}},{\"target\":\"t2\",\"test\":\"tcp\",\"verdict\":\"ip_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"reset\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=ip_block test=tcp control requests=4
+--- PASS: TestCheckMockDPIJSON (8.91s)
+    --- PASS: TestCheckMockDPIJSON/sni_block (8.21s)
+    --- PASS: TestCheckMockDPIJSON/dns_tamper (0.23s)
+    --- PASS: TestCheckMockDPIJSON/http_stub (0.25s)
+    --- PASS: TestCheckMockDPIJSON/ip_block (0.22s)
+=== RUN   TestCheckCrashLockRecovery
+    hardening_test.go:190: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckCrashLockRecovery1205575908/003/targets.signed.json"]
+    hardening_test.go:190: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckCrashLockRecovery1205575908/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    hardening_test.go:202: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckCrashLockRecovery1205575908/003/targets.signed.json"]
+    hardening_test.go:202: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    hardening_test.go:209: old crash lock preserved without waiting or network; explicit owner-verified removal recovered the command; normal exit released lock
+--- PASS: TestCheckCrashLockRecovery (0.24s)
+=== RUN   TestCheckConcurrentProcesses
+    hardening_test.go:295: surface=OS subprocess CLI invocation=["/tmp/go-build526685772/b001/mayak.test" "-test.run=^TestCheckConcurrentProcesses$" "-test.v"] role=holder XDG_CONFIG_HOME="/tmp/TestCheckConcurrentProcesses3399288652/001" APPDATA="/tmp/TestCheckConcurrentProcesses3399288652/002"
+    hardening_test.go:331: surface=OS subprocess CLI invocation=["/tmp/go-build526685772/b001/mayak.test" "-test.run=^TestCheckConcurrentProcesses$" "-test.v"] role=contender
+    hardening_test.go:333: contender transcript:
+        === RUN   TestCheckConcurrentProcesses
+            hardening_test.go:224: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentProcesses350719240/003/targets.signed.json"]
+            hardening_test.go:224: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckConcurrentProcesses3399288652/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+            hardening_test.go:228: second OS process refused before load/pick/network; live lock preserved
+        --- PASS: TestCheckConcurrentProcesses (0.01s)
+        PASS
+    hardening_test.go:349: holder transcript:
+        === RUN   TestCheckConcurrentProcesses
+            hardening_test.go:254: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentProcesses225764493/004/targets.signed.json" "--json"]
+        LOCK_READY
+            hardening_test.go:254: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"e8a4e78453\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.2\",\"results\":[{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+            hardening_test.go:261: first OS process published the newer revision and released its lock
+        --- PASS: TestCheckConcurrentProcesses (0.04s)
+        PASS
+        
+        stderr=
+    hardening_test.go:358: published targets.rev="2026-11-09.2\n"
+    hardening_test.go:358: published rotation="1\n"
+--- PASS: TestCheckConcurrentProcesses (0.05s)
+=== RUN   TestVersionCommand
+--- PASS: TestVersionCommand (0.00s)
+=== RUN   TestSmokeVersion
+    smoke_test.go:145: surface=real binary invocation=["/tmp/TestSmokeVersion451554445/001/mayak" "version"]
+    smoke_test.go:145: exit=0 stdout="dev\n" stderr=""
+--- PASS: TestSmokeVersion (0.48s)
+=== RUN   TestSmokeExpiredList
+    smoke_test.go:160: surface=real binary invocation=["/tmp/TestSmokeExpiredList1592592993/001/mayak" "check" "--targets-file" "/tmp/TestSmokeExpiredList1592592993/002/targets.signed.json"]
+    smoke_test.go:160: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeExpiredList1592592993/002/targets.signed.json) expired on 2026-11-08. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestSmokeExpiredList (0.61s)
+=== RUN   TestSmokeForeignKeyList
+    smoke_test.go:180: surface=real binary invocation=["/tmp/TestSmokeForeignKeyList1193924849/001/mayak" "check" "--targets-file" "/tmp/TestSmokeForeignKeyList1193924849/002/targets.signed.json"]
+    smoke_test.go:180: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeForeignKeyList1193924849/002/targets.signed.json) is not signed by a key this mayak trusts. Use the list built into mayak or a list from the project.\n"
+--- PASS: TestSmokeForeignKeyList (0.48s)
+=== RUN   TestSmokeLimitOutOfRange
+    smoke_test.go:193: surface=real binary invocation=["/tmp/TestSmokeLimitOutOfRange498551768/001/mayak" "check" "--limit" "3"]
+    smoke_test.go:193: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+--- PASS: TestSmokeLimitOutOfRange (0.47s)
+=== RUN   TestSmokeLeavesNoStateOutsideTemp
+--- PASS: TestSmokeLeavesNoStateOutsideTemp (0.48s)
+=== RUN   TestCheckInterruptMidRun
+    check_interrupt_test.go:94: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptMidRun214265119/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:94: exit=130 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"10e460e459\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    check_interrupt_test.go:127: state before: rev="2026-11-08.1\n" rotation="2\n"; after: rev="2026-11-08.1\n" rotation="2\n"
+--- PASS: TestCheckInterruptMidRun (0.01s)
+=== RUN   TestCheckInterruptText
+    check_interrupt_test.go:136: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptText1571232481/003/targets.signed.json"]
+    check_interrupt_test.go:136: exit=130 stdout="t1  ok  The site opened normally.\nt2  not measured\nSummary: 1 checked, ok 1\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+--- PASS: TestCheckInterruptText (0.01s)
+=== RUN   TestCheckInterruptBeforeStart
+    check_interrupt_test.go:164: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart2641505127/003/targets.signed.json"]
+    check_interrupt_test.go:164: exit=130 stdout="t1  not measured\nt2  not measured\nSummary: 0 checked\nNothing was sent.\nThe run was interrupted; it stopped before finishing, and nothing was sent.\n" stderr=""
+    check_interrupt_test.go:175: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckInterruptBeforeStart2641505127/003/targets.signed.json" "--json"]
+    check_interrupt_test.go:175: exit=130 stdout="" stderr=""
+    check_interrupt_test.go:194: cancelled before start: no state files or staging directories remain
+--- PASS: TestCheckInterruptBeforeStart (0.00s)
+=== RUN   TestCheckInterruptSignal
+    check_interrupt_test.go:344: surface=OS subprocess invocation=["/tmp/go-build526685772/b001/mayak.test" "-test.run=^TestCheckInterruptSignal$" "-test.v"] env=MAYAK_SIGNAL_HELPER=1 MAYAK_SIGNAL_MARKER="/tmp/TestCheckInterruptSignal3187399655/001/signal-ready" XDG_CONFIG_HOME="/tmp/TestCheckInterruptSignal3187399655/001"
+    check_interrupt_test.go:361: marker="t1 complete; pool paused before t2\n"
+    check_interrupt_test.go:373: calling cmd.Process.Signal(os.Interrupt) pid=642114
+    check_interrupt_test.go:382: child test exit=0
+    check_interrupt_test.go:354: child stdout:
+        === RUN   TestCheckInterruptSignal
+            check_interrupt_test.go:309: surface=CLI signal.NotifyContext invocation=mayak check --targets-file "/tmp/TestCheckInterruptSignal3187399655/001/TestCheckInterruptSignal1067263397/003/targets.signed.json" --json
+            check_interrupt_test.go:323: state targets.rev byte-identical: before="2026-11-08.1\n" after="2026-11-08.1\n"
+            check_interrupt_test.go:323: state rotation byte-identical: before="2\n" after="2\n"
+        SIGNAL_CHILD_JSON=[{"schema":"mayak.report/1","report_id":"fdc8df9824","ts":"2026-11-09T12:00:00Z","agent":{"ver":"dev","os":"linux","source":"cli"},"net":{"ip_ver":4,"resolver":"unknown","country":"","region":null},"targets_rev":"2026-11-09.1","results":[{"target":"t1","test":"http","verdict":"ok","evidence":{"anchors_alive":true,"ctrl_alive":true,"dns_control":"ok","dns_system":"ok","external":"reachable","http_hash":"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398","http_result":"responded","http_size":75,"http_status":200,"tcp":"ok","tls_neutral_sni":"cert_invalid","tls_target_sni":"ok","tls_via_control":"ok"}}]}]
+        SIGNAL_CHILD_EXIT=130
+            check_interrupt_test.go:326: stderr=""
+        --- PASS: TestCheckInterruptSignal (0.02s)
+        PASS
+        
+        child stderr:
+--- PASS: TestCheckInterruptSignal (0.02s)
+=== RUN   TestCheckRunOK
+    check_test.go:224: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckRunOK2992887591/003/targets.signed.json" "--limit" "5"]
+    check_test.go:224: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckRunOK (0.23s)
+=== RUN   TestCheckNoControlGuard
+    check_test.go:251: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckNoControlGuard1988385193/003/targets.signed.json"]
+    check_test.go:251: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckNoControlGuard (0.00s)
+=== RUN   TestCheckJSON
+    check_test.go:265: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckJSON1364827483/003/targets.signed.json" "--json"]
+    check_test.go:265: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"e4d9937ad3\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+--- PASS: TestCheckJSON (0.23s)
+=== RUN   TestCheckLimitBounds
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2095512602/003/targets.signed.json" "--limit" "3"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2095512602/003/targets.signed.json" "--limit" "4"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 4\n"
+    check_test.go:294: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckLimitBounds2095512602/003/targets.signed.json" "--limit" "21"]
+    check_test.go:294: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 21\n"
+--- PASS: TestCheckLimitBounds (0.01s)
+=== RUN   TestCheckBadTargetsKind
+    check_test.go:303: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckBadTargetsKind3055863891/003/targets.signed.json" "--targets" "cat"]
+    check_test.go:303: exit=1 stdout="" stderr="error: --targets must be \"core\" or empty, got \"cat\"\n"
+--- PASS: TestCheckBadTargetsKind (0.00s)
+=== RUN   TestCheckExpiredList
+    check_test.go:324: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckExpiredList2295787567/003/targets.signed.json"]
+    check_test.go:324: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckExpiredList2295787567/003/targets.signed.json) expired on 2026-11-09. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestCheckExpiredList (0.01s)
+=== RUN   TestCheckDeadControlAnchorsDown
+=== RUN   TestCheckDeadControlAnchorsDown/json=false
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=false2739050552/003/targets.signed.json"]
+    check_test.go:346: exit=2 stdout="t1  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nt2  inconclusive  The control node could not be reached, so no trustworthy measurement was possible.\nSummary: 2 checked, inconclusive 2\nThe control node was unreachable, so nothing could be measured.\nNothing was sent.\nThe control node was unreachable, so no result of this run can be trusted.\n" stderr=""
+=== RUN   TestCheckDeadControlAnchorsDown/json=true
+    check_test.go:346: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckDeadControlAnchorsDownjson=true1740122661/003/targets.signed.json" "--json"]
+    check_test.go:346: exit=2 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"f1bc1640bb\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"},{\"target\":\"t2\",\"test\":\"ctrl\",\"verdict\":\"inconclusive\"}]}]\n" stderr=""
+--- PASS: TestCheckDeadControlAnchorsDown (0.41s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=false (0.21s)
+    --- PASS: TestCheckDeadControlAnchorsDown/json=true (0.20s)
+=== RUN   TestCheckAllowlistModeExitZero
+    check_test.go:385: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckAllowlistModeExitZero3411947007/003/targets.signed.json"]
+    check_test.go:385: exit=0 stdout="t1  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nt2  allowlist_mode  The network only allows a list of approved sites, and this one is not on it.\nSummary: 2 checked, allowlist_mode 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckAllowlistModeExitZero (0.21s)
+=== RUN   TestProductionResolvers
+    check_test.go:411: production resolvers=[{Addr:1.1.1.1:853 Transport:dot ServerName:cloudflare-dns.com} {Addr:8.8.8.8:853 Transport:dot ServerName:dns.google}]; undeployed control resolver={Addr:invalid AddrPort Transport: ServerName:}
+--- PASS: TestProductionResolvers (0.00s)
+=== RUN   TestCheckIncompleteEnvGuard
+=== RUN   TestCheckIncompleteEnvGuard/url
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardurl4060036685/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/tls
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardtls3025565722/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/dns
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuarddns3789787259/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteEnvGuard/public
+    check_test.go:428: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteEnvGuardpublic4237485513/003/targets.signed.json"]
+    check_test.go:428: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckIncompleteEnvGuard (0.02s)
+    --- PASS: TestCheckIncompleteEnvGuard/url (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/tls (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/dns (0.01s)
+    --- PASS: TestCheckIncompleteEnvGuard/public (0.01s)
+=== RUN   TestCheckTextWriteError
+=== RUN   TestCheckTextWriteError/normal
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrornormal3205733504/003/targets.signed.json" mode=normal stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/inconclusive
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinconclusive1237775379/003/targets.signed.json" mode=inconclusive stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+=== RUN   TestCheckTextWriteError/interrupted
+    check_test.go:469: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckTextWriteErrorinterrupted3650637104/003/targets.signed.json" mode=interrupted stdout=failedOutput
+    check_test.go:474: exit=1 error=print the results: stdout closed
+--- PASS: TestCheckTextWriteError (0.43s)
+    --- PASS: TestCheckTextWriteError/normal (0.22s)
+    --- PASS: TestCheckTextWriteError/inconclusive (0.21s)
+    --- PASS: TestCheckTextWriteError/interrupted (0.00s)
+=== RUN   TestCheckMockDPIVerdicts
+=== RUN   TestCheckMockDPIVerdicts/sni_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictssni_block536341917/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nt2  sni_block  The connection is cut when the site's name is shown, which looks like SNI filtering.\nSummary: 2 checked, sni_block 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/dns_tamper
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsdns_tamper1581773852/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  dns_tamper  The DNS answer looks forged: the address is not a real one for this site.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 1, dns_tamper 1\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/http_stub
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictshttp_stub189585197/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  http_stub  The site answers with a known block page instead of its real content.\nt2  http_stub  The site answers with a known block page instead of its real content.\nSummary: 2 checked, http_stub 2\nNothing was sent.\n" stderr=""
+=== RUN   TestCheckMockDPIVerdicts/ip_block
+    check_test.go:519: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIVerdictsip_block2121647403/003/targets.signed.json"]
+    check_test.go:519: exit=0 stdout="t1  ip_block  The site's address refuses connections, which looks like an IP block.\nt2  ip_block  The site's address refuses connections, which looks like an IP block.\nSummary: 2 checked, ip_block 2\nNothing was sent.\n" stderr=""
+--- PASS: TestCheckMockDPIVerdicts (0.91s)
+    --- PASS: TestCheckMockDPIVerdicts/sni_block (0.22s)
+    --- PASS: TestCheckMockDPIVerdicts/dns_tamper (0.24s)
+    --- PASS: TestCheckMockDPIVerdicts/http_stub (0.23s)
+    --- PASS: TestCheckMockDPIVerdicts/ip_block (0.22s)
+=== RUN   TestCheckConcurrentPublication
+    check_test.go:541: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3550168059/004/targets.signed.json"]
+    check_test.go:555: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3550168059/005/targets.signed.json"]
+    check_test.go:555: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckConcurrentPublication3550168059/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    check_test.go:541: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    check_test.go:581: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentPublication3550168059/005/targets.signed.json"]
+    check_test.go:581: exit=1 stdout="" stderr="error: The targets list (/tmp/TestCheckConcurrentPublication3550168059/005/targets.signed.json) has version 2026-11-09.1, which is older than version 2026-11-09.2 that mayak has already accepted. An older list is refused. Update mayak or pass the newer signed list with --targets-file.\n"
+    check_test.go:590: accepted targets.rev unchanged after rejected competitor and rollback: "2026-11-09.2\n"
+    check_test.go:590: accepted rotation unchanged after rejected competitor and rollback: "0\n"
+--- PASS: TestCheckConcurrentPublication (0.08s)
+=== RUN   TestCheckIncompleteResolverFields
+=== RUN   TestCheckIncompleteResolverFields/public-first-address
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-first-address2345517625/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-second-address
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-second-address1171326233/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-port
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-port4160789142/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-transport
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-transport2967464914/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/public-server-name
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldspublic-server-name3845157001/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/control-port
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-port3255925612/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/control-transport
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-transport1632021693/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/control-server-name
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldscontrol-server-name1283626124/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+=== RUN   TestCheckIncompleteResolverFields/tls-port
+    hardening_test.go:50: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckIncompleteResolverFieldstls-port3929448729/003/targets.signed.json"]
+    hardening_test.go:50: exit=2 stdout="" stderr="mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n"
+--- PASS: TestCheckIncompleteResolverFields (0.04s)
+    --- PASS: TestCheckIncompleteResolverFields/public-first-address (0.01s)
+    --- PASS: TestCheckIncompleteResolverFields/public-second-address (0.01s)
+    --- PASS: TestCheckIncompleteResolverFields/public-port (0.01s)
+    --- PASS: TestCheckIncompleteResolverFields/public-transport (0.01s)
+    --- PASS: TestCheckIncompleteResolverFields/public-server-name (0.01s)
+    --- PASS: TestCheckIncompleteResolverFields/control-port (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/control-transport (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/control-server-name (0.00s)
+    --- PASS: TestCheckIncompleteResolverFields/tls-port (0.00s)
+=== RUN   TestCheckJSONWriteError
+=== RUN   TestCheckJSONWriteError/normal
+    hardening_test.go:87: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrornormal2896446312/003/targets.signed.json" --json mode=normal stdout=failedOutput
+    hardening_test.go:92: exit=1 error=print the report: stdout closed
+=== RUN   TestCheckJSONWriteError/inconclusive
+    hardening_test.go:87: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrorinconclusive3678090122/003/targets.signed.json" --json mode=inconclusive stdout=failedOutput
+    hardening_test.go:92: exit=1 error=print the report: stdout closed
+=== RUN   TestCheckJSONWriteError/interrupted
+    hardening_test.go:87: surface=in-process CLI invocation=mayak check --targets-file "/tmp/TestCheckJSONWriteErrorinterrupted994272703/003/targets.signed.json" --json mode=interrupted stdout=failedOutput
+    hardening_test.go:92: exit=1 error=print the report: stdout closed
+--- PASS: TestCheckJSONWriteError (0.47s)
+    --- PASS: TestCheckJSONWriteError/normal (0.24s)
+    --- PASS: TestCheckJSONWriteError/inconclusive (0.21s)
+    --- PASS: TestCheckJSONWriteError/interrupted (0.03s)
+=== RUN   TestCheckMockDPIJSON
+=== RUN   TestCheckMockDPIJSON/sni_block
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONsni_block3576663373/003/targets.signed.json" "--json"]
+
+MANUAL SURFACE: real compiled CLI
+INVOCATION: ['cmd/mayak/mayak', 'check', '--json']
+ENV: HOME=/tmp/mayak-cli-qa-b5vkn9u2 XDG_CONFIG_HOME=/tmp/mayak-cli-qa-b5vkn9u2/config APPDATA=/tmp/mayak-cli-qa-b5vkn9u2/appdata
+EXIT: 2
+STDOUT: ''
+STDERR: 'mayak check: the control URL, control TLS address, separate control DNS resolver, and at least two public resolvers must all be configured in this build, so nothing can be measured. Nothing was sent.\n'
+FILES: []
+MANUAL COMPILED GUARD: PASS
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"c76807c488\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"tls_sni\",\"verdict\":\"sni_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"reset_after_hello\",\"tls_via_control\":\"reset_after_hello\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"timeout_unknown\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_result\":\"timeout\",\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=sni_block test=tls_sni control requests=4
+=== RUN   TestCheckMockDPIJSON/dns_tamper
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONdns_tamper1909961284/003/targets.signed.json" "--json"]
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"a871ebf321\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"dns\",\"verdict\":\"dns_tamper\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=dns_tamper test=dns control requests=6
+=== RUN   TestCheckMockDPIJSON/http_stub
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONhttp_stub1617071357/003/targets.signed.json" "--json"]
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"c1dea70ea8\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"http_stub\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"5cfd5bd6a69f6060b7fbe8e13d4e8b182a61d8941d37f0a0e3c47c49911e98ae\",\"http_result\":\"responded\",\"http_size\":66,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"http_stub\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"5cfd5bd6a69f6060b7fbe8e13d4e8b182a61d8941d37f0a0e3c47c49911e98ae\",\"http_result\":\"responded\",\"http_size\":66,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=http_stub test=http control requests=6
+=== RUN   TestCheckMockDPIJSON/ip_block
+    hardening_test.go:145: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckMockDPIJSONip_block1117640873/003/targets.signed.json" "--json"]
+    hardening_test.go:145: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"4e7b915782\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.1\",\"results\":[{\"target\":\"t1\",\"test\":\"tcp\",\"verdict\":\"ip_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"reset\"}},{\"target\":\"t2\",\"test\":\"tcp\",\"verdict\":\"ip_block\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"tcp\":\"reset\"}}]}]\n" stderr=""
+    hardening_test.go:170: validated report: target=t1 verdict=ip_block test=tcp control requests=4
+--- PASS: TestCheckMockDPIJSON (8.90s)
+    --- PASS: TestCheckMockDPIJSON/sni_block (8.21s)
+    --- PASS: TestCheckMockDPIJSON/dns_tamper (0.22s)
+    --- PASS: TestCheckMockDPIJSON/http_stub (0.25s)
+    --- PASS: TestCheckMockDPIJSON/ip_block (0.22s)
+=== RUN   TestCheckCrashLockRecovery
+    hardening_test.go:190: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckCrashLockRecovery4233815041/003/targets.signed.json"]
+    hardening_test.go:190: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckCrashLockRecovery4233815041/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+    hardening_test.go:202: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckCrashLockRecovery4233815041/003/targets.signed.json"]
+    hardening_test.go:202: exit=0 stdout="t1  ok  The site opened normally.\nt2  ok  The site opened normally.\nSummary: 2 checked, ok 2\nNothing was sent.\n" stderr=""
+    hardening_test.go:209: old crash lock preserved without waiting or network; explicit owner-verified removal recovered the command; normal exit released lock
+--- PASS: TestCheckCrashLockRecovery (0.24s)
+=== RUN   TestCheckConcurrentProcesses
+    hardening_test.go:295: surface=OS subprocess CLI invocation=["/tmp/go-build526685772/b001/mayak.test" "-test.run=^TestCheckConcurrentProcesses$" "-test.v"] role=holder XDG_CONFIG_HOME="/tmp/TestCheckConcurrentProcesses2865223514/001" APPDATA="/tmp/TestCheckConcurrentProcesses2865223514/002"
+    hardening_test.go:331: surface=OS subprocess CLI invocation=["/tmp/go-build526685772/b001/mayak.test" "-test.run=^TestCheckConcurrentProcesses$" "-test.v"] role=contender
+    hardening_test.go:333: contender transcript:
+        === RUN   TestCheckConcurrentProcesses
+            hardening_test.go:224: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentProcesses4150714011/003/targets.signed.json"]
+            hardening_test.go:224: exit=1 stdout="" stderr="error: mayak check is locked by /tmp/TestCheckConcurrentProcesses2865223514/001/mayak/check.lock. Wait for the current run to finish. Remove check.lock only after confirming no mayak check process is running\n"
+            hardening_test.go:228: second OS process refused before load/pick/network; live lock preserved
+        --- PASS: TestCheckConcurrentProcesses (0.01s)
+        PASS
+    hardening_test.go:349: holder transcript:
+        === RUN   TestCheckConcurrentProcesses
+            hardening_test.go:254: surface=in-process CLI invocation=mayak check ["--targets-file" "/tmp/TestCheckConcurrentProcesses393565327/004/targets.signed.json" "--json"]
+        LOCK_READY
+            hardening_test.go:254: exit=0 stdout="[{\"schema\":\"mayak.report/1\",\"report_id\":\"03a31c66d6\",\"ts\":\"2026-11-09T12:00:00Z\",\"agent\":{\"ver\":\"dev\",\"os\":\"linux\",\"source\":\"cli\"},\"net\":{\"ip_ver\":4,\"resolver\":\"unknown\",\"country\":\"\",\"region\":null},\"targets_rev\":\"2026-11-09.2\",\"results\":[{\"target\":\"t2\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"e7be9c64c9e45b651332e8f19fa3cbb47b39d98ec9ddcc5a70c1d909700688e4\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}},{\"target\":\"t1\",\"test\":\"http\",\"verdict\":\"ok\",\"evidence\":{\"anchors_alive\":true,\"ctrl_alive\":true,\"dns_control\":\"ok\",\"dns_system\":\"ok\",\"external\":\"reachable\",\"http_hash\":\"a9f87cb7cf63c7fa2460d745da86a224469e1baaf3cd6ce3eab5f32708743398\",\"http_result\":\"responded\",\"http_size\":75,\"http_status\":200,\"tcp\":\"ok\",\"tls_neutral_sni\":\"cert_invalid\",\"tls_target_sni\":\"ok\",\"tls_via_control\":\"ok\"}}]}]\n" stderr=""
+            hardening_test.go:261: first OS process published the newer revision and released its lock
+        --- PASS: TestCheckConcurrentProcesses (0.07s)
+        PASS
+        
+        stderr=
+    hardening_test.go:358: published targets.rev="2026-11-09.2\n"
+    hardening_test.go:358: published rotation="1\n"
+--- PASS: TestCheckConcurrentProcesses (0.09s)
+=== RUN   TestVersionCommand
+--- PASS: TestVersionCommand (0.00s)
+=== RUN   TestSmokeVersion
+    smoke_test.go:145: surface=real binary invocation=["/tmp/TestSmokeVersion2670872257/001/mayak" "version"]
+    smoke_test.go:145: exit=0 stdout="dev\n" stderr=""
+--- PASS: TestSmokeVersion (0.49s)
+=== RUN   TestSmokeExpiredList
+    smoke_test.go:160: surface=real binary invocation=["/tmp/TestSmokeExpiredList408995156/001/mayak" "check" "--targets-file" "/tmp/TestSmokeExpiredList408995156/002/targets.signed.json"]
+    smoke_test.go:160: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeExpiredList408995156/002/targets.signed.json) expired on 2026-11-08. Old lists are refused. Check that your clock is right, then update mayak or pass a newer signed list with --targets-file.\n"
+--- PASS: TestSmokeExpiredList (0.62s)
+=== RUN   TestSmokeForeignKeyList
+    smoke_test.go:180: surface=real binary invocation=["/tmp/TestSmokeForeignKeyList1111341797/001/mayak" "check" "--targets-file" "/tmp/TestSmokeForeignKeyList1111341797/002/targets.signed.json"]
+    smoke_test.go:180: exit=1 stdout="" stderr="error: The targets list (/tmp/TestSmokeForeignKeyList1111341797/002/targets.signed.json) is not signed by a key this mayak trusts. Use the list built into mayak or a list from the project.\n"
+--- PASS: TestSmokeForeignKeyList (0.48s)
+=== RUN   TestSmokeLimitOutOfRange
+    smoke_test.go:193: surface=real binary invocation=["/tmp/TestSmokeLimitOutOfRange3062659724/001/mayak" "check" "--limit" "3"]
+    smoke_test.go:193: exit=1 stdout="" stderr="error: --limit must be between 5 and 20, got 3\n"
+--- PASS: TestSmokeLimitOutOfRange (0.46s)
+=== RUN   TestSmokeLeavesNoStateOutsideTemp
+--- PASS: TestSmokeLeavesNoStateOutsideTemp (0.48s)
+PASS
+ok  	github.com/polargoose18/mayak/cmd/mayak	29.663s
+go test -count=2 exit=0
+
+EXECUTOR FINAL EVIDENCE: gofmt -w cmd/mayak/*.go exited 0; go vet ./cmd/mayak exited 0; go test ./cmd/mayak -count=2 -v exited 0; go build -o cmd/mayak/mayak ./cmd/mayak exited 0. Generated in-scope binary removed after manual QA.
+Diagnostics limitation: gopls not installed. Native Windows runtime unavailable. No go test ./... or commit.
+Manual QA matrix: /home/goose/Documents/Mayak/.omo/evidence/mayak-block-b-finish/task-13-cli-hardening-manual-qa.md

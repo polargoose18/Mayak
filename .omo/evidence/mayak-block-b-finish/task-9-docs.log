@@ -1,0 +1,293 @@
+# task-9-docs QA log — 2026-11-09T11:15:06Z
+
+## $ grep -n "3 ОС\|3 OS" docs/SPEC.md
+(no output — criterion "3 ОС" removed from SPEC)
+
+## $ grep -n "3 ОС\|macOS" docs/SPEC.md # M1 row line 277
+277:| M1 Агент локально | `mayak check`: dns, tcp, tls\_sni, http; классификатор | Все вердикты верны на мок-DPI; бинарники под Linux и Windows; macOS отложен |
+
+## $ grep -n "mayak check\|mayak-ctrl\|internal/runner" README.md
+19:- команда `mayak check` с текстовым выводом и `--json` (`cmd/mayak`), прогон целиком локальный, ничего не отправляет;
+20:- оркестратор прогона с потолками нагрузки: не больше 4 одновременных проверок, пауза 200–800 мс между ними, таймаут 8 секунд на тест, 5–20 целей за прогон (`internal/runner`);
+21:- контрольный узел `mayak-ctrl` (`cmd/mayak-ctrl`): `/v1/ping`, `/v1/reach`, `/v1/fetch` и TLS-обработчик, принимающий любой SNI (SPEC §21.1);
+31:Команда `mayak check` ничего не отправляет; уверенный вердикт требует настроенного контрольного узла — без него `mayak check` завершается с кодом 2 и не касается сети.
+
+## $ ls cmd/mayak-ctrl && ls internal/runner/pool.go internal/runner/runner.go
+main_test.go
+internal/runner/pool.go
+internal/runner/runner.go
+
+## $ grep -n MaxConcurrency internal/runner/runner.go
+23:	MinLimit       = 5                      // fewest targets per run
+24:	MaxLimit       = 20                     // most targets per run
+26:	MaxConcurrency = 4                      // checks running at the same time
+27:	PauseMin       = 200 * time.Millisecond // shortest pause between two starts
+28:	PauseMax       = 800 * time.Millisecond // longest pause between two starts
+29:	TestTimeout    = 8 * time.Second        // ceiling for one test
+97:	Limit       int           // targets per run, MinLimit..MaxLimit
+98:	Concurrency int           // checks at the same time, at most MaxConcurrency
+
+## $ grep -n windows .github/workflows/ci.yml
+28:  windows:
+29:    runs-on: windows-2025
+
+## $ git diff --stat docs/SPEC.md README.md
+ README.md    | 17 ++++++++++-------
+ docs/SPEC.md |  2 +-
+ 2 files changed, 11 insertions(+), 8 deletions(-)
+
+## trimmed git diff docs/SPEC.md
+diff --git a/docs/SPEC.md b/docs/SPEC.md
+index 63a52b3..7aca4a2 100644
+--- a/docs/SPEC.md
++++ b/docs/SPEC.md
+@@ -274,7 +274,7 @@ mayak/
+ | Этап | Результат | Критерий готовности |
+ | --- | --- | --- |
+ | M0 Основа | Схема отчёта, ADR-001…003, `targets.json` v0, каркас мок-DPI | Схема валидируется, мок-DPI поднимает 3 сценария |
+-| M1 Агент локально | `mayak check`: dns, tcp, tls\_sni, http; классификатор | Все вердикты верны на мок-DPI; бинарники под 3 ОС |
++| M1 Агент локально | `mayak check`: dns, tcp, tls\_sni, http; классификатор | Все вердикты верны на мок-DPI; бинарники под Linux и Windows; macOS отложен |
+ | M2 Сервер | Ingest, enricher, Postgres, targets API, PoW | 100 отчётов/с на скромном VPS; IP нигде не оседает |
+ | M3 Агрегатор и публичный слой | Статусы, события, страница, бот | В симуляции 10% враждебных источников не меняют статус |
+ | M4 Веб-проба и согласие | Страница-проба, `consent`, `--dry-run` | Пользователь видит JSON до отправки |
+
+## trimmed git diff README.md
+diff --git a/README.md b/README.md
+index 7293bf9..dc4c126 100644
+--- a/README.md
++++ b/README.md
+@@ -15,17 +15,20 @@
+ - формат отчёта `mayak.report/1`, JSON Schema и валидатор (`internal/report`, `schema/`);
+ - пробы `dns`, `tcp`, `tls_sni`, `http` и `ctrl` и классификатор вердиктов (`internal/probe`, `internal/classify`), проверенные на мок-цензоре (`testbed/mockdpi`);
+ - подписанный список целей: формат v2, подпись ed25519, срок действия, защита от отката (`internal/targets`);
+-- инструмент владельца `mayak-sign` для ключей и подписи списка (`cmd/mayak-sign`).
++- инструмент владельца `mayak-sign` для ключей и подписи списка (`cmd/mayak-sign`);
++- команда `mayak check` с текстовым выводом и `--json` (`cmd/mayak`), прогон целиком локальный, ничего не отправляет;
++- оркестратор прогона с потолками нагрузки: не больше 4 одновременных проверок, пауза 200–800 мс между ними, таймаут 8 секунд на тест, 5–20 целей за прогон (`internal/runner`);
++- контрольный узел `mayak-ctrl` (`cmd/mayak-ctrl`): `/v1/ping`, `/v1/reach`, `/v1/fetch` и TLS-обработчик, принимающий любой SNI (SPEC §21.1);
++- сборка и тесты на Windows в CI.
+ 
+ Ещё нет:
+ 
+-- команды `mayak check`: пока `mayak` умеет только `version`;
+-- оркестратора с потолками нагрузки (не больше 4 одновременных проверок, пауза 200–800 мс, таймаут 8 секунд на тест): они записаны в требованиях, но в коде не реализованы;
+-- проб `quic`, `tcp_freeze`, `throughput`; для вердиктов `freeze_after_n` и `throttled` правил классификации пока нет;
+-- сервера (`mayakd`), контрольного узла (`mayak-ctrl`), согласия на отправку, публичной страницы, бота;
+-- подписанных релизов.
++- сервера (`mayakd`), веб-проб, публичной страницы, бота;
++- согласия на отправку и команды `mayak report --dry-run`;
++- проб `quic`, `tcp_freeze`, `throughput` (`tcp_freeze` и `throughput` запланированы на блок F);
++- подписанных релизов, развёрнутого контрольного узла, Privacy Pass.
+ 
+-Агент сейчас ничего не отправляет и отправлять не умеет.
++Команда `mayak check` ничего не отправляет; уверенный вердикт требует настроенного контрольного узла — без него `mayak check` завершается с кодом 2 и не касается сети.
+ 
+ ## Чего проект не делает
+ 
+
+=== Task 9 correction: baseline ===
+diff --git a/README.md b/README.md
+index 7293bf9..dc4c126 100644
+--- a/README.md
++++ b/README.md
+@@ -15,17 +15,20 @@
+ - формат отчёта `mayak.report/1`, JSON Schema и валидатор (`internal/report`, `schema/`);
+ - пробы `dns`, `tcp`, `tls_sni`, `http` и `ctrl` и классификатор вердиктов (`internal/probe`, `internal/classify`), проверенные на мок-цензоре (`testbed/mockdpi`);
+ - подписанный список целей: формат v2, подпись ed25519, срок действия, защита от отката (`internal/targets`);
+-- инструмент владельца `mayak-sign` для ключей и подписи списка (`cmd/mayak-sign`).
++- инструмент владельца `mayak-sign` для ключей и подписи списка (`cmd/mayak-sign`);
++- команда `mayak check` с текстовым выводом и `--json` (`cmd/mayak`), прогон целиком локальный, ничего не отправляет;
++- оркестратор прогона с потолками нагрузки: не больше 4 одновременных проверок, пауза 200–800 мс между ними, таймаут 8 секунд на тест, 5–20 целей за прогон (`internal/runner`);
++- контрольный узел `mayak-ctrl` (`cmd/mayak-ctrl`): `/v1/ping`, `/v1/reach`, `/v1/fetch` и TLS-обработчик, принимающий любой SNI (SPEC §21.1);
++- сборка и тесты на Windows в CI.
+ 
+ Ещё нет:
+ 
+-- команды `mayak check`: пока `mayak` умеет только `version`;
+-- оркестратора с потолками нагрузки (не больше 4 одновременных проверок, пауза 200–800 мс, таймаут 8 секунд на тест): они записаны в требованиях, но в коде не реализованы;
+-- проб `quic`, `tcp_freeze`, `throughput`; для вердиктов `freeze_after_n` и `throttled` правил классификации пока нет;
+-- сервера (`mayakd`), контрольного узла (`mayak-ctrl`), согласия на отправку, публичной страницы, бота;
+-- подписанных релизов.
++- сервера (`mayakd`), веб-проб, публичной страницы, бота;
++- согласия на отправку и команды `mayak report --dry-run`;
++- проб `quic`, `tcp_freeze`, `throughput` (`tcp_freeze` и `throughput` запланированы на блок F);
++- подписанных релизов, развёрнутого контрольного узла, Privacy Pass.
+ 
+-Агент сейчас ничего не отправляет и отправлять не умеет.
++Команда `mayak check` ничего не отправляет; уверенный вердикт требует настроенного контрольного узла — без него `mayak check` завершается с кодом 2 и не касается сети.
+ 
+ ## Чего проект не делает
+ 
+stale_version_removed FAIL (expected before correction)
+control_in_structure FAIL (expected before correction)
+runner_in_structure FAIL (expected before correction)
+baseline assertion failures: 3
+
+=== Task 9 correction verification ===
+$ grep -n пока только version\|cmd/mayak-ctrl\|internal/runner README.md
+20:- оркестратор прогона с потолками нагрузки: не больше 4 одновременных проверок, пауза 200–800 мс между ними, таймаут 8 секунд на тест, 5–20 целей за прогон (`internal/runner`);
+21:- контрольный узел `mayak-ctrl` (`cmd/mayak-ctrl`): `/v1/ping`, `/v1/reach`, `/v1/fetch` и TLS-обработчик, принимающий любой SNI (SPEC §21.1); развёртывание узла ещё предстоит;
+95:cmd/mayak-ctrl/     контрольный узел: API и TLS-обработчик для любого SNI
+101:internal/runner/    прогон mayak check: выбор целей, потолки нагрузки, пробы
+exit_code=0
+$ git diff -- README.md
+diff --git a/README.md b/README.md
+index 7293bf9..299ecf9 100644
+--- a/README.md
++++ b/README.md
+@@ -15,17 +15,20 @@
+ - формат отчёта `mayak.report/1`, JSON Schema и валидатор (`internal/report`, `schema/`);
+ - пробы `dns`, `tcp`, `tls_sni`, `http` и `ctrl` и классификатор вердиктов (`internal/probe`, `internal/classify`), проверенные на мок-цензоре (`testbed/mockdpi`);
+ - подписанный список целей: формат v2, подпись ed25519, срок действия, защита от отката (`internal/targets`);
+-- инструмент владельца `mayak-sign` для ключей и подписи списка (`cmd/mayak-sign`).
++- инструмент владельца `mayak-sign` для ключей и подписи списка (`cmd/mayak-sign`);
++- команда `mayak check` с текстовым выводом и `--json` (`cmd/mayak`), прогон целиком локальный, ничего не отправляет;
++- оркестратор прогона с потолками нагрузки: не больше 4 одновременных проверок, пауза 200–800 мс между ними, таймаут 8 секунд на тест, 5–20 целей за прогон (`internal/runner`);
++- контрольный узел `mayak-ctrl` (`cmd/mayak-ctrl`): `/v1/ping`, `/v1/reach`, `/v1/fetch` и TLS-обработчик, принимающий любой SNI (SPEC §21.1); развёртывание узла ещё предстоит;
++- сборка и тесты на Windows в CI.
+ 
+ Ещё нет:
+ 
+-- команды `mayak check`: пока `mayak` умеет только `version`;
+-- оркестратора с потолками нагрузки (не больше 4 одновременных проверок, пауза 200–800 мс, таймаут 8 секунд на тест): они записаны в требованиях, но в коде не реализованы;
+-- проб `quic`, `tcp_freeze`, `throughput`; для вердиктов `freeze_after_n` и `throttled` правил классификации пока нет;
+-- сервера (`mayakd`), контрольного узла (`mayak-ctrl`), согласия на отправку, публичной страницы, бота;
+-- подписанных релизов.
++- сервера (`mayakd`), веб-проб, публичной страницы, бота;
++- согласия на отправку и команды `mayak report --dry-run`;
++- проб `quic`, `tcp_freeze`, `throughput` (`tcp_freeze` и `throughput` запланированы на блок F);
++- подписанных релизов, развёрнутого контрольного узла, Privacy Pass.
+ 
+-Агент сейчас ничего не отправляет и отправлять не умеет.
++Команда `mayak check` ничего не отправляет; уверенный вердикт требует настроенного контрольного узла — без него `mayak check` завершается с кодом 2 и не касается сети.
+ 
+ ## Чего проект не делает
+ 
+@@ -88,12 +91,14 @@ go run ./cmd/mayak version
+ ## Структура
+ 
+ ```
+-cmd/mayak/          агент (пока только version)
++cmd/mayak/          агент (CLI): version и локальный check
++cmd/mayak-ctrl/     контрольный узел: API и TLS-обработчик для любого SNI
+ cmd/mayak-sign/     ключи и подпись списка целей
+ internal/probe/     пробы dns, tcp, tls_sni, http, ctrl
+ internal/classify/  правила вердиктов
+ internal/report/    формат отчёта и валидатор
+ internal/targets/   подписанный список целей
++internal/runner/    прогон mayak check: выбор целей, потолки нагрузки, пробы
+ targets/            список целей и обоснования
+ schema/             JSON Schema отчёта
+ testbed/mockdpi/    мок-цензор для тестов
+exit_code=0
+$ ls -ld cmd/mayak cmd/mayak/check.go cmd/mayak-ctrl/ cmd/mayak-ctrl/main.go cmd/mayak-sign internal/runner/ internal/runner/runner.go internal/report schema/report.schema.json internal/probe internal/classify internal/targets testbed/mockdpi .github/workflows/ci.yml
+drwxr-xr-x 2 goose goose  4096 Nov  9 17:47 cmd/mayak
+-rw-r--r-- 1 goose goose  9862 Nov  9 17:45 cmd/mayak/check.go
+drwxr-xr-x 2 goose goose  4096 Nov  9 17:43 cmd/mayak-ctrl/
+-rw-r--r-- 1 goose goose 16884 Nov  9 17:43 cmd/mayak-ctrl/main.go
+drwxr-xr-x 2 goose goose  4096 Nov  9 13:52 cmd/mayak-sign
+-rw-r--r-- 1 goose goose  1397 Nov  9 14:11 .github/workflows/ci.yml
+drwxr-xr-x 2 goose goose  4096 Nov  9 14:11 internal/classify
+drwxr-xr-x 2 goose goose  4096 Nov  9 13:55 internal/probe
+drwxr-xr-x 3 goose goose  4096 Nov  9 13:52 internal/report
+drwxr-xr-x 2 goose goose  4096 Nov  9 14:11 internal/runner/
+-rw-r--r-- 1 goose goose  4910 Nov  9 13:52 internal/runner/runner.go
+drwxr-xr-x 2 goose goose  4096 Nov  9 13:52 internal/targets
+-rw-r--r-- 1 goose goose  2696 Nov  9 13:52 schema/report.schema.json
+drwxr-xr-x 2 goose goose  4096 Nov  9 13:52 testbed/mockdpi
+exit_code=0
+$ git diff --check -- README.md
+exit_code=0
+stale_version_removed: PASS
+control_in_structure: PASS
+runner_in_structure: PASS
+deployment_explicitly_pending: PASS
+future_scope_retained: PASS
+Markdown diagnostics: unavailable; no .md LSP server configured.
+
+=== Task 9 correction: make check ===
+$ make check
+go vet ./...
+go test ./...
+ok  	github.com/polargoose18/mayak/cmd/mayak	(cached)
+ok  	github.com/polargoose18/mayak/cmd/mayak-ctrl	(cached)
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	(cached)
+ok  	github.com/polargoose18/mayak/internal/classify	(cached)
+ok  	github.com/polargoose18/mayak/internal/probe	(cached)
+ok  	github.com/polargoose18/mayak/internal/report	(cached)
+ok  	github.com/polargoose18/mayak/internal/runner	(cached)
+ok  	github.com/polargoose18/mayak/internal/targets	(cached)
+ok  	github.com/polargoose18/mayak/targets	(cached)
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	(cached)
+make_check_exit_code=0
+
+=== Task 9 correction: independent source claim cross-check ===
+$ python3 source-claim checks (patterns and matching lines below)
+PASS report schema and validator; pattern=SchemaID = "mayak.report/1"
+internal/report/report.go:7: const SchemaID = "mayak.report/1"
+PASS JSON Schema; pattern=mayak.report/1
+schema/report.schema.json:3:   "title": "mayak.report/1",
+schema/report.schema.json:8:     "schema": {"const": "mayak.report/1"},
+PASS validator; pattern=func Validate
+internal/report/validate.go:42: func Validate(data []byte) (*Report, error) {
+internal/report/validate.go:53: func ValidateAt(data []byte, now time.Time) (*Report, error) {
+PASS mock censor integration; pattern=testbed/mockdpi|func TestProbeToClassify
+internal/probe/integration_test.go:10: 	"github.com/polargoose18/mayak/testbed/mockdpi"
+internal/probe/integration_test.go:34: func TestProbeToClassify(t *testing.T) {
+PASS signed file v2 and ed25519; pattern=File format \(v2\)|ed25519.Sign|func Verify
+internal/targets/sign.go:16: // File format (v2):
+internal/targets/sign.go:57: 		Sig:     base64.StdEncoding.EncodeToString(ed25519.Sign(priv, payload)),
+internal/targets/sign.go:89: func Verify(pubs []ed25519.PublicKey, data []byte, now time.Time) (*Targets, error) {
+internal/targets/sign.go:178: 	if len(sig) != ed25519.SignatureSize {
+PASS expiry; pattern=MaxLifetime|ErrExpired
+internal/targets/targets.go:44: 	// MaxLifetime is how far ahead of the signing time a list may expire.
+internal/targets/targets.go:45: 	MaxLifetime = 30 * 24 * time.Hour
+internal/targets/targets.go:48: 	// signer's: a list that expires up to this much beyond MaxLifetime from
+internal/targets/targets.go:51: 	// accepted), nor to Sign (nothing beyond MaxLifetime is signed).
+internal/targets/targets.go:58: 	// ErrExpired is returned for a list whose expires is in the past.
+internal/targets/targets.go:59: 	ErrExpired = errors.New("targets list expired")
+internal/targets/targets.go:79: // stops being valid, at most MaxLifetime after it was signed, so that an old
+internal/targets/targets.go:137: // further than MaxLifetime plus skew ahead. The expiry check has no allowance.
+internal/targets/targets.go:141: 		return ErrExpired
+internal/targets/targets.go:142: 	case t.Expires.After(now.Add(MaxLifetime + skew)):
+internal/targets/targets.go:143: 		return invalid("expires is more than %d days ahead", int(MaxLifetime/(24*time.Hour)))
+PASS rollback; pattern=CheckRev|ErrRollback
+internal/targets/revstore.go:43: 	if err := CheckRev(stored, t.Rev); err != nil {
+internal/targets/revstore.go:47: 		// CheckRev has passed, so a different rev is a newer one.
+internal/targets/revstore.go:97: 			return fmt.Errorf("%w: have %s, got %s", ErrRollback, stored, rev)
+PASS owner tooling; pattern=root.AddCommand
+cmd/mayak-sign/main.go:38: 	root.AddCommand(newKeygenCmd(), newPubkeyCmd(), newSignCmd(now), newVerifyCmd(now))
+PASS local check text and JSON; pattern=Use:   "check"|BoolVar|func printText|func printJSON|Nothing was sent
+cmd/mayak/check.go:22: const guardNoControl = "mayak check: no control node is configured in this build, so nothing can be measured. Nothing was sent."
+cmd/mayak/check.go:54: 		Use:   "check",
+cmd/mayak/check.go:67: 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the report as JSON instead of text")
+cmd/mayak/check.go:226: func printText(cmd *cobra.Command, results []runner.Result) {
+cmd/mayak/check.go:249: 	fmt.Fprintln(out, "Nothing was sent.")
+cmd/mayak/check.go:253: func printJSON(cmd *cobra.Command, env runner.Env, list *targets.Targets, results []runner.Result) error {
+PASS load ceilings; pattern=MinLimit       =|MaxLimit       =|MaxConcurrency =|PauseMin       =|PauseMax       =|TestTimeout    =
+internal/runner/runner.go:23: 	MinLimit       = 5                      // fewest targets per run
+internal/runner/runner.go:24: 	MaxLimit       = 20                     // most targets per run
+internal/runner/runner.go:26: 	MaxConcurrency = 4                      // checks running at the same time
+internal/runner/runner.go:27: 	PauseMin       = 200 * time.Millisecond // shortest pause between two starts
+internal/runner/runner.go:28: 	PauseMax       = 800 * time.Millisecond // longest pause between two starts
+internal/runner/runner.go:29: 	TestTimeout    = 8 * time.Second        // ceiling for one test
+PASS control API and TLS; pattern=mux.HandleFunc|func newSelfSignedCert|GetCertificate|tls.NewListener|ServerName
+cmd/mayak-ctrl/main.go:102: func newSelfSignedCert() (tls.Certificate, string, error) {
+cmd/mayak-ctrl/main.go:215: 	mux.HandleFunc("GET /v1/ping", srv.ping)
+cmd/mayak-ctrl/main.go:216: 	mux.HandleFunc("GET /v1/reach", srv.reach)
+cmd/mayak-ctrl/main.go:217: 	mux.HandleFunc("GET /v1/fetch", srv.fetch)
+cmd/mayak-ctrl/main.go:431: 			TLSClientConfig:   &tls.Config{ServerName: host, RootCAs: s.rootCAs, MinVersion: tls.VersionTLS12},
+cmd/mayak-ctrl/main.go:504: 		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+cmd/mayak-ctrl/main.go:517: 	return tls.NewListener(ln, tlsCfg), nil
+PASS Windows CI; pattern=windows:|runs-on: windows|go build|go test
+.github/workflows/ci.yml:24:       - run: go test -race ./...
+.github/workflows/ci.yml:28:   windows:
+.github/workflows/ci.yml:29:     runs-on: windows-2025
+.github/workflows/ci.yml:35:       - run: go build ./...
+.github/workflows/ci.yml:36:       - run: go test ./...
+PASS probe implementation: internal/probe/dns.go
+PASS probe implementation: internal/probe/tcp.go
+PASS probe implementation: internal/probe/tls.go
+PASS probe implementation: internal/probe/http.go
+PASS probe implementation: internal/probe/ctrl.go
+All eight Есть bullets cross-checked. Windows claim means configured CI jobs; no remote execution claimed. Deployment remains explicitly pending.

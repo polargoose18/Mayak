@@ -1,0 +1,110 @@
+# Task 6: expiry guard — manual QA evidence
+## Date: 2026-11-09T14:11:31+03:00
+
+$ go test ./targets -run TestEmbeddedListFreshness -count=1
+--- FAIL: TestEmbeddedListFreshness (0.00s)
+    embed_test.go:74: embedded targets list is about to expire: targets list expires 2026-11-11T00:00:00Z, which is within 168h0m0s of now (2026-11-09T14:11:31+03:00); re-sign it:
+          go run ./cmd/mayak-sign sign --key <key> --in targets/targets.json --out targets/targets.signed.json
+          make sign-check
+FAIL
+FAIL	github.com/polargoose18/mayak/targets	0.003s
+FAIL
+exit=1
+
+$ make targets-expiry
+go test -count=1 -run '^TestEmbeddedListFreshness$' ./targets
+--- FAIL: TestEmbeddedListFreshness (0.00s)
+    embed_test.go:74: embedded targets list is about to expire: targets list expires 2026-11-11T00:00:00Z, which is within 168h0m0s of now (2026-11-09T14:11:32+03:00); re-sign it:
+          go run ./cmd/mayak-sign sign --key <key> --in targets/targets.json --out targets/targets.signed.json
+          make sign-check
+FAIL
+FAIL	github.com/polargoose18/mayak/targets	0.002s
+FAIL
+make: *** [Makefile:32: targets-expiry] Error 1
+exit=2
+
+$ go test ./targets -run TestFreshEnough -count=1 -v
+=== RUN   TestFreshEnough
+=== RUN   TestFreshEnough/28_days_left
+=== RUN   TestFreshEnough/8_days_left
+=== RUN   TestFreshEnough/exactly_7_days_left
+=== RUN   TestFreshEnough/6_days_left
+=== RUN   TestFreshEnough/already_past
+=== RUN   TestFreshEnough/zero
+--- PASS: TestFreshEnough (0.00s)
+    --- PASS: TestFreshEnough/28_days_left (0.00s)
+    --- PASS: TestFreshEnough/8_days_left (0.00s)
+    --- PASS: TestFreshEnough/exactly_7_days_left (0.00s)
+    --- PASS: TestFreshEnough/6_days_left (0.00s)
+    --- PASS: TestFreshEnough/already_past (0.00s)
+    --- PASS: TestFreshEnough/zero (0.00s)
+PASS
+ok  	github.com/polargoose18/mayak/targets	0.002s
+exit=0
+
+$ make check
+go vet ./...
+# github.com/polargoose18/mayak/internal/classify
+internal/classify/classify.go:130:24: undefined: isBogon
+internal/classify/classify.go:192:23: undefined: isBogon
+# github.com/polargoose18/mayak/internal/classify
+# [github.com/polargoose18/mayak/internal/classify]
+vet: internal/classify/classify.go:130:24: undefined: isBogon
+make: *** [Makefile:7: vet] Error 1
+exit=2
+
+$ go test ./... -count=1 (summary)
+ok  	github.com/polargoose18/mayak/cmd/mayak	0.002s
+FAIL	github.com/polargoose18/mayak/cmd/mayak-ctrl [build failed]
+ok  	github.com/polargoose18/mayak/cmd/mayak-sign	0.026s
+FAIL	github.com/polargoose18/mayak/internal/classify [build failed]
+FAIL	github.com/polargoose18/mayak/internal/probe [build failed]
+ok  	github.com/polargoose18/mayak/internal/report	0.031s
+FAIL	github.com/polargoose18/mayak/internal/runner [build failed]
+ok  	github.com/polargoose18/mayak/internal/targets	0.035s
+FAIL
+FAIL	github.com/polargoose18/mayak/targets	0.004s
+ok  	github.com/polargoose18/mayak/testbed/mockdpi	0.525s
+FAIL
+
+$ yaml parse of ci.yml check job proving new step with continue-on-error
+[
+ {
+  "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+ },
+ {
+  "uses": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
+  "with": {
+   "go-version-file": "go.mod"
+  }
+ },
+ {
+  "run": "make check"
+ },
+ {
+  "run": "make sign-check"
+ },
+ {
+  "run": "make targets-expiry",
+  "continue-on-error": true
+ },
+ {
+  "run": "go test -race ./..."
+ },
+ {
+  "run": "go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./..."
+ }
+]
+FOUND: make targets-expiry with continue-on-error: true
+exit=0
+
+## Note on `make check` / full `go test ./...` failures
+The worktree is edited concurrently by sibling work units. During QA, packages
+internal/classify, internal/probe, internal/runner and cmd/mayak-ctrl went
+build-broken mid-session (e.g. `undefined: isBogon` in classify.go, missing
+`newServer` in mayak-ctrl tests) — pre-existing / concurrent, not caused by
+task 6 (an earlier identical run before those agents' writes had them `ok`,
+and `git stash -u` + `make vet` before my edits also passed vet). Task-6 scope
+verified clean: `gofmt -l targets/` empty, `go vet ./targets/` ok,
+`go test ./targets -count=1` = exactly TestEmbeddedListFreshness FAIL (intended,
+list expires 2026-11-11), all other targets tests PASS.
